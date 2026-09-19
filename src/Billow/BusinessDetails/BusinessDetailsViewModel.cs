@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using System.Text.RegularExpressions;
 using System.Windows.Input;
 using Billow.Data;
 using Billow.Gst;
@@ -14,7 +15,7 @@ namespace Billow.BusinessDetails;
 /// Business record, loading it when created. A field is checked each time it changes, and every
 /// field is checked on Save.
 /// </summary>
-public sealed class BusinessDetailsViewModel : INotifyPropertyChanged, INotifyDataErrorInfo
+public sealed partial class BusinessDetailsViewModel : INotifyPropertyChanged, INotifyDataErrorInfo
 {
     /// <summary>
     /// The rule for each field that can have an error: it gives the reason the field's current
@@ -38,6 +39,10 @@ public sealed class BusinessDetailsViewModel : INotifyPropertyChanged, INotifyDa
             : IsBlank(screen.Gstin) ? "Enter the GSTIN."
             : Gst.Gstin.Check(screen.Gstin).Error,
         [nameof(Pan)] = screen => IsBlank(screen.Pan) ? null : Gst.Pan.Check(screen.Pan).Error,
+        [nameof(UpiId)] = screen => IsBlank(screen.UpiId) || UpiIdPattern().IsMatch(screen.UpiId.Trim()) ? null
+            : "A UPI ID is a name, then @, then the bank's handle, such as sharmastores@okaxis.",
+        [nameof(Ifsc)] = screen => IsBlank(screen.Ifsc) || IfscPattern().IsMatch(NormaliseIfsc(screen.Ifsc)) ? null
+            : "An IFSC is 4 letters, then 0, then 6 letters or digits, such as HDFC0001234.",
     };
 
     /// <summary>Why a change of Registration Type or GSTIN is safe: see ADR-0001.</summary>
@@ -59,6 +64,14 @@ public sealed class BusinessDetailsViewModel : INotifyPropertyChanged, INotifyDa
     private RegistrationType? _registrationType;
     private string _gstin = "";
     private string _pan = "";
+    private string _phone = "";
+    private string _email = "";
+    private string _upiId = "";
+    private string _bankAccountName = "";
+    private string _bankAccountNumber = "";
+    private string _ifsc = "";
+    private string _bankName = "";
+    private string _bankBranch = "";
 
     public BusinessDetailsViewModel(
         Func<BillowDbContext> openDatabase,
@@ -216,6 +229,54 @@ public sealed class BusinessDetailsViewModel : INotifyPropertyChanged, INotifyDa
         }
     }
 
+    public string Phone
+    {
+        get => _phone;
+        set => SetAndCheck(ref _phone, value);
+    }
+
+    public string Email
+    {
+        get => _email;
+        set => SetAndCheck(ref _email, value);
+    }
+
+    public string UpiId
+    {
+        get => _upiId;
+        set => SetAndCheck(ref _upiId, value);
+    }
+
+    public string BankAccountName
+    {
+        get => _bankAccountName;
+        set => SetAndCheck(ref _bankAccountName, value);
+    }
+
+    public string BankAccountNumber
+    {
+        get => _bankAccountNumber;
+        set => SetAndCheck(ref _bankAccountNumber, value);
+    }
+
+    public string Ifsc
+    {
+        get => _ifsc;
+        set => SetAndCheck(ref _ifsc, value);
+    }
+
+    public string BankName
+    {
+        get => _bankName;
+        set => SetAndCheck(ref _bankName, value);
+    }
+
+    public string BankBranch
+    {
+        get => _bankBranch;
+        set => SetAndCheck(ref _bankBranch, value);
+    }
+
     /// <summary>The GSTIN, if it applies and is valid; otherwise null.</summary>
     private Gst.Gstin? ValidGstin => IsGstinApplicable ? Gst.Gstin.Check(Gstin).Value : null;
 
@@ -273,6 +334,14 @@ public sealed class BusinessDetailsViewModel : INotifyPropertyChanged, INotifyDa
         business.RegistrationType = RegistrationType!.Value;
         business.Gstin = gstin;
         business.Pan = IsBlank(Pan) ? null : Gst.Pan.Check(Pan).Value!.Value;
+        business.Phone = NullIfBlank(Phone);
+        business.Email = NullIfBlank(Email);
+        business.UpiId = NullIfBlank(UpiId);
+        business.BankAccountName = NullIfBlank(BankAccountName);
+        business.BankAccountNumber = NullIfBlank(BankAccountNumber);
+        business.Ifsc = IsBlank(Ifsc) ? null : NormaliseIfsc(Ifsc);
+        business.BankName = NullIfBlank(BankName);
+        business.BankBranch = NullIfBlank(BankBranch);
         business.AdditionalRegistrations.Clear();
         business.AdditionalRegistrations.AddRange(AdditionalRegistrations
             .Where(row => !row.IsEmpty)
@@ -336,6 +405,14 @@ public sealed class BusinessDetailsViewModel : INotifyPropertyChanged, INotifyDa
         _registrationType = business?.RegistrationType;
         _gstin = business?.Gstin ?? "";
         _pan = business?.Pan ?? "";
+        _phone = business?.Phone ?? "";
+        _email = business?.Email ?? "";
+        _upiId = business?.UpiId ?? "";
+        _bankAccountName = business?.BankAccountName ?? "";
+        _bankAccountNumber = business?.BankAccountNumber ?? "";
+        _ifsc = business?.Ifsc ?? "";
+        _bankName = business?.BankName ?? "";
+        _bankBranch = business?.BankBranch ?? "";
 
         AdditionalRegistrations.Clear();
         var registrations = business?.AdditionalRegistrations ?? [];
@@ -373,6 +450,16 @@ public sealed class BusinessDetailsViewModel : INotifyPropertyChanged, INotifyDa
 
         OnPropertyChanged(nameof(AreStateAndPanLocked));
     }
+
+    /// <summary>A UPI ID's shape, <c>name@handle</c>. Whether it exists is never checked.</summary>
+    [GeneratedRegex("^[A-Za-z0-9._-]+@[A-Za-z0-9]+$")]
+    private static partial Regex UpiIdPattern();
+
+    /// <summary>An IFSC's shape: the bank's 4 letters, 0, then the branch's 6 letters or digits.</summary>
+    [GeneratedRegex("^[A-Z]{4}0[A-Z0-9]{6}$")]
+    private static partial Regex IfscPattern();
+
+    private static string NormaliseIfsc(string ifsc) => ifsc.Trim().ToUpperInvariant();
 
     private static bool IsBlank(string value) => string.IsNullOrWhiteSpace(value);
 
