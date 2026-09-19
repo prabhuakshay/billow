@@ -1,5 +1,6 @@
 using System.IO;
 using Billow.BusinessDetails;
+using Billow.Customers;
 using Microsoft.EntityFrameworkCore;
 
 namespace Billow.Data;
@@ -18,6 +19,8 @@ public class BillowDbContext : DbContext
     }
 
     public DbSet<Business> Businesses => Set<Business>();
+
+    public DbSet<Customer> Customers => Set<Customer>();
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -44,5 +47,15 @@ public class BillowDbContext : DbContext
         });
 
         modelBuilder.Entity<AdditionalRegistration>().ToTable("AdditionalRegistrations");
+
+        modelBuilder.Entity<Customer>(customer =>
+        {
+            customer.Property(c => c.StateCode).HasMaxLength(2);
+            customer.Property(c => c.Pin).HasMaxLength(6);
+            customer.Property(c => c.Gstin).HasMaxLength(15);
+
+            // A GSTIN belongs to one Customer only. SQLite lets any number of rows share a null.
+            customer.HasIndex(c => c.Gstin).IsUnique();
+        });
     }
 }
