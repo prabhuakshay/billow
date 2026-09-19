@@ -7,6 +7,15 @@ Simple billing software for Windows, with optional inventory management.
 
 > **Status:** early development. The app currently opens an empty window; features are being built.
 
+## Not supported
+
+Billow is built for small Indian retail businesses. It does **not** support:
+
+- **E-invoicing**: generating an IRN and signed QR code through the Invoice Registration Portal. This is mandatory for businesses with annual turnover above ₹5 crore.
+- **E-way bills**: needed when moving goods worth more than ₹50,000.
+
+If your business needs either one, use a separate tool for it. See [ADR-0002](docs/adr/0002-no-e-invoicing-or-e-way-bills.md).
+
 ## Requirements
 
 - Windows 10 or 11
