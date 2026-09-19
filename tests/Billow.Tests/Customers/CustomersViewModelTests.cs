@@ -285,7 +285,7 @@ public sealed class CustomersViewModelTests : IDisposable
     }
 
     [Fact]
-    public void TheSearchStillAppliesAfterACustomerIsAdded()
+    public void AddingACustomerClearsTheSearchAndSelectsIt()
     {
         var list = OpenList();
         AddCustomer(list, "Ramesh Patil");
@@ -293,7 +293,44 @@ public sealed class CustomersViewModelTests : IDisposable
 
         AddCustomer(list, "Anita Desai");
 
+        Assert.Equal("", list.SearchText);
+        Assert.Equal(["Anita Desai", "Ramesh Patil"], NamesIn(list));
+        Assert.Equal("Anita Desai", list.SelectedCustomer?.Name);
+    }
+
+    [Fact]
+    public void CancellingAnAddKeepsTheSearch()
+    {
+        var list = OpenList();
+        AddCustomer(list, "Anita Desai");
+        AddCustomer(list, "Ramesh Patil");
+        list.SearchText = "patil";
+        _formOpener.UseForm = form => form.CancelCommand.Execute(null);
+
+        list.AddCommand.Execute(null);
+
+        Assert.Equal("patil", list.SearchText);
         Assert.Equal(["Ramesh Patil"], NamesIn(list));
+    }
+
+    [Fact]
+    public void TheSearchStillAppliesAfterACustomerIsEdited()
+    {
+        var list = OpenList();
+        AddCustomer(list, "Anita Desai");
+        AddCustomer(list, "Ramesh Patil", city: "Pune");
+        list.SearchText = "patil";
+        list.SelectedCustomer = list.Customers[0];
+        _formOpener.UseForm = form =>
+        {
+            form.City = "Nashik";
+            form.SaveCommand.Execute(null);
+        };
+
+        list.EditCommand.Execute(null);
+
+        Assert.Equal(["Ramesh Patil"], NamesIn(list));
+        Assert.Equal("Nashik", list.Customers[0].City);
     }
 
     [Fact]
@@ -319,5 +356,20 @@ public sealed class CustomersViewModelTests : IDisposable
         list.SearchText = "pat";
 
         Assert.Equal("Ramesh Patil", list.SelectedCustomer?.Name);
+    }
+
+    [Theory]
+    [InlineData("9876543210")]
+    [InlineData("6543")]
+    [InlineData("98 765 432")]
+    public void SpacesAreIgnoredWhenSearchingByPhone(string search)
+    {
+        var list = OpenList();
+        AddCustomer(list, "Anita Desai", phone: "91234 56789");
+        AddCustomer(list, "Ramesh Patil", phone: "98765 43210");
+
+        list.SearchText = search;
+
+        Assert.Equal(["Ramesh Patil"], NamesIn(list));
     }
 }

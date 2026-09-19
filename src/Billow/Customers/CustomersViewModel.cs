@@ -70,7 +70,7 @@ public sealed class CustomersViewModel : INotifyPropertyChanged
         }
     }
 
-    /// <summary>Opens the form on a new Customer, and selects it once saved.</summary>
+    /// <summary>Opens the form on a new Customer. Once it is saved, clears the search and selects it.</summary>
     public ICommand AddCommand { get; }
 
     /// <summary>Opens the form on the selected Customer. Does nothing if none is selected.</summary>
@@ -81,6 +81,12 @@ public sealed class CustomersViewModel : INotifyPropertyChanged
         var form = new CustomerViewModel(_openDatabase, customerId);
         if (_formOpener.Open(form))
         {
+            // A new Customer may not match the search, so clear the search to show and select it.
+            if (customerId is null)
+            {
+                SearchText = "";
+            }
+
             Load(selectId: form.Id);
         }
     }
