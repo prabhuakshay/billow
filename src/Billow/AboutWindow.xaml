@@ -1,0 +1,28 @@
+﻿<Window x:Class="Billow.AboutWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="About Billow" Width="380" SizeToContent="Height"
+        ResizeMode="NoResize" ShowInTaskbar="False" WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}">
+    <DockPanel>
+        <!-- Standard Windows dialog layout: white content area, grey button strip. -->
+        <Border DockPanel.Dock="Bottom" Padding="12,10">
+            <Button Content="OK" IsDefault="True" IsCancel="True" Width="80" Height="24"
+                    HorizontalAlignment="Right" />
+        </Border>
+
+        <Border Padding="16,14" BorderThickness="0,0,0,1"
+                BorderBrush="{DynamicResource {x:Static SystemColors.ControlDarkBrushKey}}"
+                Background="{DynamicResource {x:Static SystemColors.WindowBrushKey}}">
+            <StackPanel>
+                <TextBlock Text="Billow" FontSize="16" FontWeight="SemiBold" />
+                <TextBlock x:Name="VersionText" Margin="0,2,0,0" />
+                <TextBlock Text="Billing, with optional inventory." Margin="0,12,0,0" TextWrapping="Wrap" />
+
+                <TextBlock Text="Data folder:" Margin="0,12,0,0" />
+                <TextBox x:Name="DataFolderText" IsReadOnly="True" BorderThickness="0" Padding="0"
+                         Background="Transparent" TextWrapping="Wrap" />
+            </StackPanel>
+        </Border>
+    </DockPanel>
+</Window>

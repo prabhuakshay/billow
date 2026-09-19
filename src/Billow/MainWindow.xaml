@@ -1,12 +1,78 @@
 ﻿<Window x:Class="Billow.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:Billow"
-        mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
-    <Grid>
+        Title="Billow" Height="700" Width="1100" MinHeight="500" MinWidth="800"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}">
+    <DockPanel>
+        <Border DockPanel.Dock="Top" BorderThickness="0,0,0,1"
+                BorderBrush="{DynamicResource {x:Static SystemColors.ControlDarkBrushKey}}">
+            <Menu Padding="2" Background="{DynamicResource {x:Static SystemColors.WindowBrushKey}}">
+                <MenuItem Header="_File">
+                    <MenuItem Header="E_xit" InputGestureText="Alt+F4" Click="Exit_Click" />
+                </MenuItem>
+                <MenuItem Header="_Help">
+                    <MenuItem Header="_About Billow" Click="About_Click" />
+                </MenuItem>
+            </Menu>
+        </Border>
 
-    </Grid>
+        <StatusBar DockPanel.Dock="Bottom">
+            <StatusBar.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <DockPanel LastChildFill="False" />
+                </ItemsPanelTemplate>
+            </StatusBar.ItemsPanel>
+            <StatusBarItem Content="Ready" />
+            <StatusBarItem x:Name="VersionStatus" DockPanel.Dock="Right" />
+            <Separator DockPanel.Dock="Right" />
+        </StatusBar>
+
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="220" MinWidth="160" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" MinWidth="400" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Navigation pane -->
+            <DockPanel Grid.Column="0">
+                <Border DockPanel.Dock="Top" Padding="8,5"
+                        Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}">
+                    <TextBlock Text="Navigation" FontWeight="SemiBold" />
+                </Border>
+                <TreeView x:Name="NavTree" BorderThickness="0,1,0,0" Padding="2,4"
+                          SelectedItemChanged="NavTree_SelectedItemChanged">
+                    <TreeViewItem Header="Sales" IsExpanded="True">
+                        <TreeViewItem Header="Invoices" />
+                        <TreeViewItem Header="Customers" />
+                    </TreeViewItem>
+                    <TreeViewItem Header="Inventory" IsExpanded="True">
+                        <TreeViewItem Header="Items" />
+                        <TreeViewItem Header="Stock" />
+                    </TreeViewItem>
+                    <TreeViewItem Header="Reports" />
+                </TreeView>
+            </DockPanel>
+
+            <GridSplitter Grid.Column="1" Width="4" HorizontalAlignment="Stretch"
+                          Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}" />
+
+            <!-- Work area -->
+            <Border Grid.Column="2" BorderThickness="1,0,0,0"
+                    BorderBrush="{DynamicResource {x:Static SystemColors.ControlDarkBrushKey}}"
+                    Background="{DynamicResource {x:Static SystemColors.WindowBrushKey}}">
+                <DockPanel>
+                    <Border DockPanel.Dock="Top" Padding="12,8" BorderThickness="0,0,0,1"
+                            BorderBrush="{DynamicResource {x:Static SystemColors.ControlDarkBrushKey}}">
+                        <TextBlock x:Name="PageTitle" FontSize="16" FontWeight="SemiBold" />
+                    </Border>
+
+                    <!-- Placeholder until the section's screen is built. -->
+                    <TextBlock Text="This section has not been built yet." Margin="12"
+                               Foreground="{DynamicResource {x:Static SystemColors.GrayTextBrushKey}}" />
+                </DockPanel>
+            </Border>
+        </Grid>
+    </DockPanel>
 </Window>
