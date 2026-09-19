@@ -25,8 +25,17 @@
             <Setter Property="Margin" Value="0,8,0,2" />
         </Style>
 
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibility" />
+
         <Style TargetType="TextBox">
             <Setter Property="Padding" Value="2,3" />
+            <Style.Triggers>
+                <!-- Look different from a box that can be typed in. -->
+                <Trigger Property="IsReadOnly" Value="True">
+                    <Setter Property="Background"
+                            Value="{DynamicResource {x:Static SystemColors.ControlBrushKey}}" />
+                </Trigger>
+            </Style.Triggers>
         </Style>
 
         <!-- The error under a field. Takes no space while the field has no error. -->
@@ -95,7 +104,18 @@
                     <Label Content="St_ate (required)" Target="{Binding ElementName=StateBox}"
                            Style="{StaticResource FieldLabel}" />
                     <ComboBox x:Name="StateBox" ItemsSource="{Binding States}"
-                              SelectedItem="{Binding State}" />
+                              SelectedItem="{Binding State}">
+                        <ComboBox.Style>
+                            <!-- Locked while it is filled in from a valid GSTIN. -->
+                            <Style TargetType="ComboBox">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding AreStateAndPanLocked}" Value="True">
+                                        <Setter Property="IsEnabled" Value="False" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ComboBox.Style>
+                    </ComboBox>
                     <TextBlock Style="{StaticResource FieldError}"
                                Text="{Binding (Validation.Errors)/ErrorContent, ElementName=StateBox}" />
 
@@ -108,16 +128,30 @@
 
                     <TextBlock Text="GST" Style="{StaticResource SectionHeading}" />
 
-                    <Label Content="_Registration Type" Target="{Binding ElementName=RegistrationTypeBox}"
+                    <Label Content="_Registration Type (required)" Target="{Binding ElementName=RegistrationTypeBox}"
                            Style="{StaticResource FieldLabel}" />
                     <ComboBox x:Name="RegistrationTypeBox" Width="200" HorizontalAlignment="Left"
                               ItemsSource="{Binding RegistrationTypes}"
                               SelectedItem="{Binding RegistrationType}" />
+                    <TextBlock Style="{StaticResource FieldError}"
+                               Text="{Binding (Validation.Errors)/ErrorContent, ElementName=RegistrationTypeBox}" />
+
+                    <!-- Only a Regular or Composition Business has a GSTIN. -->
+                    <StackPanel Visibility="{Binding IsGstinApplicable, Converter={StaticResource BooleanToVisibility}}">
+                        <Label Content="_GSTIN (required)" Target="{Binding ElementName=GstinBox}"
+                               Style="{StaticResource FieldLabel}" />
+                        <TextBox x:Name="GstinBox" Width="200" HorizontalAlignment="Left"
+                                 CharacterCasing="Upper"
+                                 Text="{Binding Gstin, UpdateSourceTrigger=PropertyChanged}" />
+                        <TextBlock Style="{StaticResource FieldError}"
+                                   Text="{Binding (Validation.Errors)/ErrorContent, ElementName=GstinBox}" />
+                    </StackPanel>
 
                     <Label Content="PA_N" Target="{Binding ElementName=PanBox}"
                            Style="{StaticResource FieldLabel}" />
                     <TextBox x:Name="PanBox" Width="160" HorizontalAlignment="Left"
                              CharacterCasing="Upper"
+                             IsReadOnly="{Binding AreStateAndPanLocked}"
                              Text="{Binding Pan, UpdateSourceTrigger=PropertyChanged}" />
                     <TextBlock Style="{StaticResource FieldError}"
                                Text="{Binding (Validation.Errors)/ErrorContent, ElementName=PanBox}" />

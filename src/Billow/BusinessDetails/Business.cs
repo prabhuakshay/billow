@@ -22,5 +22,8 @@ public class Business
 
     public RegistrationType RegistrationType { get; set; }
 
+    /// <summary>The normalised GSTIN, or null for an Unregistered Business.</summary>
+    public string? Gstin { get; set; }
+
     public string? Pan { get; set; }
 }
