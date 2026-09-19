@@ -38,7 +38,15 @@ Git hooks are installed automatically the first time you build or restore (they 
 
 - **Block commits on `main`.** Work on a branch and merge through a pull request.
 - **Require [Conventional Commits](https://www.conventionalcommits.org) messages**, e.g. `feat(invoices): add PDF export` or `fix: correct tax rounding`. Types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`.
-- **Check formatting and build the app** before each commit. The build runs the .NET code analyzers and the style rules in `.editorconfig`, with warnings treated as errors. Run `dotnet format` to fix formatting and most style issues automatically.
+- **Check formatting, build the app and run the tests** before each commit. The build runs the .NET code analyzers and the style rules in `.editorconfig`, with warnings treated as errors. Run `dotnet format` to fix formatting and most style issues automatically. A failing test blocks the commit, just like a build error.
+
+To run the tests yourself, from the repo root:
+
+```
+dotnet test
+```
+
+In Visual Studio, use **Test Explorer** (Test → Test Explorer). The tests live in `tests/Billow.Tests` and use [xUnit v3](https://xunit.net).
 
 ## Installing
 
@@ -78,7 +86,7 @@ Tags with a suffix, such as `v0.2.0-beta.1`, are published as pre-releases.
 
 ```
 Billow.sln                  Solution file — open this in Visual Studio
-global.json                 Pins the .NET SDK version
+global.json                 Pins the .NET SDK version and the test runner
 .editorconfig               Formatting, code style and analyzer rules
 Directory.Build.props       Code quality settings for all projects
 .husky/                     Git hooks
@@ -86,4 +94,5 @@ build-installer.ps1         Builds the installer
 .github/workflows/          Release automation
 src/Billow/                 The desktop app (WPF, .NET 10)
 src/Billow/Data/            Database (SQLite via Entity Framework Core)
+tests/Billow.Tests/         Unit tests (xUnit v3)
 ```
