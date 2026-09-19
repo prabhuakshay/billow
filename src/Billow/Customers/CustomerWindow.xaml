@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:Billow.Customers"
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance local:CustomerViewModel}"
-        Title="{Binding Title}" Width="480" Height="600" MinWidth="380" MinHeight="400"
+        Title="{Binding Title}" Width="480" Height="680" MinWidth="380" MinHeight="400"
         ShowInTaskbar="False" WindowStartupLocation="CenterOwner"
         FocusManager.FocusedElement="{Binding ElementName=NameBox}"
         Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}">
@@ -23,6 +23,8 @@
         <Style TargetType="TextBox">
             <Setter Property="Padding" Value="2,3" />
         </Style>
+
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibility" />
     </Window.Resources>
 
     <DockPanel>
@@ -40,17 +42,47 @@
                 Background="{DynamicResource {x:Static SystemColors.WindowBrushKey}}">
             <ScrollViewer VerticalScrollBarVisibility="Auto" Focusable="False">
                 <StackPanel Margin="16,8,16,16">
-                    <Label Content="_Name (required)" Target="{Binding ElementName=NameBox}"
-                           Style="{StaticResource FieldLabel}" />
+                    <Label Target="{Binding ElementName=NameBox}">
+                        <Label.Style>
+                            <!-- A B2B Customer's name is its Legal Name. -->
+                            <Style TargetType="Label" BasedOn="{StaticResource FieldLabel}">
+                                <Setter Property="Content" Value="_Name (required)" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsB2B}" Value="True">
+                                        <Setter Property="Content" Value="_Legal Name (required)" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Label.Style>
+                    </Label>
                     <ContentControl Style="{StaticResource WithError}">
                         <TextBox x:Name="NameBox"
                                  Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" />
                     </ContentControl>
 
+                    <Label Content="_Trade Name" Target="{Binding ElementName=TradeNameBox}"
+                           Style="{StaticResource FieldLabel}" />
+                    <TextBox x:Name="TradeNameBox"
+                             Text="{Binding TradeName, UpdateSourceTrigger=PropertyChanged}" />
+
+                    <Label Content="_GSTIN (for a B2B Customer)" Target="{Binding ElementName=GstinBox}"
+                           Style="{StaticResource FieldLabel}" />
+                    <ContentControl Style="{StaticResource WithError}">
+                        <TextBox x:Name="GstinBox" Width="200" HorizontalAlignment="Left"
+                                 CharacterCasing="Upper"
+                                 Text="{Binding Gstin, UpdateSourceTrigger=PropertyChanged}" />
+                    </ContentControl>
+                    <TextBlock Margin="0,2,0,0" TextWrapping="Wrap"
+                               Foreground="{DynamicResource {x:Static SystemColors.GrayTextBrushKey}}"
+                               Text="With a GSTIN, the Legal Name, Address Line 1, City, State and PIN are required."
+                               Visibility="{Binding IsB2B, Converter={StaticResource BooleanToVisibility}}" />
+
                     <Label Content="Address Line _1" Target="{Binding ElementName=AddressLine1Box}"
                            Style="{StaticResource FieldLabel}" />
-                    <TextBox x:Name="AddressLine1Box"
-                             Text="{Binding AddressLine1, UpdateSourceTrigger=PropertyChanged}" />
+                    <ContentControl Style="{StaticResource WithError}">
+                        <TextBox x:Name="AddressLine1Box"
+                                 Text="{Binding AddressLine1, UpdateSourceTrigger=PropertyChanged}" />
+                    </ContentControl>
 
                     <Label Content="Address Line _2" Target="{Binding ElementName=AddressLine2Box}"
                            Style="{StaticResource FieldLabel}" />
@@ -59,13 +91,28 @@
 
                     <Label Content="_City" Target="{Binding ElementName=CityBox}"
                            Style="{StaticResource FieldLabel}" />
-                    <TextBox x:Name="CityBox"
-                             Text="{Binding City, UpdateSourceTrigger=PropertyChanged}" />
+                    <ContentControl Style="{StaticResource WithError}">
+                        <TextBox x:Name="CityBox"
+                                 Text="{Binding City, UpdateSourceTrigger=PropertyChanged}" />
+                    </ContentControl>
 
                     <Label Content="St_ate" Target="{Binding ElementName=StateBox}"
                            Style="{StaticResource FieldLabel}" />
-                    <ComboBox x:Name="StateBox" ItemsSource="{Binding States}"
-                              SelectedItem="{Binding State}" />
+                    <ContentControl Style="{StaticResource WithError}">
+                        <ComboBox x:Name="StateBox" ItemsSource="{Binding States}"
+                                  SelectedItem="{Binding State}">
+                            <ComboBox.Style>
+                                <!-- Locked while it is filled in from a valid GSTIN. -->
+                                <Style TargetType="ComboBox">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsStateLocked}" Value="True">
+                                            <Setter Property="IsEnabled" Value="False" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </ComboBox.Style>
+                        </ComboBox>
+                    </ContentControl>
 
                     <Label Content="_PIN" Target="{Binding ElementName=PinBox}"
                            Style="{StaticResource FieldLabel}" />
