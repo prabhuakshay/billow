@@ -39,8 +39,8 @@ public sealed class CustomersViewModel : INotifyPropertyChanged
                 OpenForm(customer.Id);
             }
         });
-        DeactivateCommand = new RelayCommand(() => SetSelectedActive(false));
-        ActivateCommand = new RelayCommand(() => SetSelectedActive(true));
+        DeactivateCommand = new RelayCommand(() => SetSelectedActive(isActive: false));
+        ActivateCommand = new RelayCommand(() => SetSelectedActive(isActive: true));
         DeleteCommand = new RelayCommand(DeleteSelected);
         Load(selectId: null);
     }
@@ -158,7 +158,7 @@ public sealed class CustomersViewModel : INotifyPropertyChanged
         if (SelectedCustomer is not { } selected
             || !_confirmationPrompt.Confirm(
                 $"Delete the Customer \"{selected.Name}\"? This can't be undone.\n\n"
-                + "To keep their record but take them off the list, Deactivate them instead."))
+                + "To keep its record but take it off the list, Deactivate it instead."))
         {
             return;
         }

@@ -49,6 +49,12 @@ public sealed class CustomersViewModelTests : IDisposable
         list.AddCommand.Execute(null);
     }
 
+    private Customer? FindInDatabase(string name)
+    {
+        using var db = _database.Open();
+        return db.Customers.SingleOrDefault(c => c.Name == name);
+    }
+
     private static string[] NamesIn(CustomersViewModel list) => [.. list.Customers.Select(c => c.Name)];
 
     [Fact]
@@ -372,12 +378,6 @@ public sealed class CustomersViewModelTests : IDisposable
         list.SearchText = search;
 
         Assert.Equal(["Ramesh Patil"], NamesIn(list));
-    }
-
-    private Customer? FindInDatabase(string name)
-    {
-        using var db = _database.Open();
-        return db.Customers.SingleOrDefault(c => c.Name == name);
     }
 
     [Fact]
