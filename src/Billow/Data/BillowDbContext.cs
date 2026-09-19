@@ -5,14 +5,14 @@ namespace Billow.Data;
 
 public class BillowDbContext : DbContext
 {
-    protected override void OnConfiguring(DbContextOptionsBuilder options)
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
-        if (options.IsConfigured)
+        if (optionsBuilder.IsConfigured)
         {
             return;
         }
 
         Directory.CreateDirectory(AppPaths.DataDirectory);
-        options.UseSqlite($"Data Source={AppPaths.DatabasePath}");
+        optionsBuilder.UseSqlite($"Data Source={AppPaths.DatabasePath}");
     }
 }

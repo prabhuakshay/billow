@@ -1,0 +1,6 @@
+# Stored as LF in the repo, checked out as CRLF (matches .editorconfig), whatever core.autocrlf says.
+* text=auto eol=crlf
+
+# Git hooks run under sh, which breaks on CRLF.
+.husky/* text eol=lf
+*.sh text eol=lf

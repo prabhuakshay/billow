@@ -1,0 +1,15 @@
+<Project>
+
+  <!-- Code quality settings shared by every project. Rules and their severities live in .editorconfig. -->
+  <PropertyGroup>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+
+    <!-- Needed for IDE0005 (unused usings) to run on build; https://github.com/dotnet/roslyn/issues/41640.
+         CS1591 (missing XML comment) is off because we only document where it helps. -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+
+</Project>
