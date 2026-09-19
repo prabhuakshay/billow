@@ -30,10 +30,21 @@ public sealed class BusinessDetailsViewModel : INotifyPropertyChanged, INotifyDa
             { Length: 6 } pin when pin.All(char.IsAsciiDigit) => null,
             _ => "A PIN is exactly 6 digits.",
         },
+        [nameof(RegistrationType)] = screen =>
+            screen.RegistrationType is null ? "Choose the Registration Type." : null,
+        [nameof(Gstin)] = screen => !screen.IsGstinApplicable ? null
+            : IsBlank(screen.Gstin) ? "Enter the GSTIN."
+            : Gst.Gstin.Check(screen.Gstin).Error,
         [nameof(Pan)] = screen => IsBlank(screen.Pan) ? null : Gst.Pan.Check(screen.Pan).Error,
     };
 
+    /// <summary>Why a change of Registration Type or GSTIN is safe: see ADR-0001.</summary>
+    private const string ChangeAppliesToNewBillsOnly =
+        "Changing the Registration Type or GSTIN applies to new Bills only. Bills already issued "
+        + "keep the details they were printed with.\n\nSave the change?";
+
     private readonly Func<BillowDbContext> _openDatabase;
+    private readonly IConfirmationPrompt _confirmationPrompt;
     private readonly Dictionary<string, string> _errors = [];
 
     private string _legalName = "";
@@ -43,7 +54,8 @@ public sealed class BusinessDetailsViewModel : INotifyPropertyChanged, INotifyDa
     private string _city = "";
     private GstState? _state;
     private string _pin = "";
-    private RegistrationType _registrationType = RegistrationType.Unregistered;
+    private RegistrationType? _registrationType;
+    private string _gstin = "";
     private string _pan = "";
 
     public BusinessDetailsViewModel(
@@ -52,6 +64,7 @@ public sealed class BusinessDetailsViewModel : INotifyPropertyChanged, INotifyDa
         ILogoFilePicker logoFilePicker)
     {
         _openDatabase = openDatabase;
+        _confirmationPrompt = confirmationPrompt;
         SaveCommand = new RelayCommand(() =>
         {
             if (Save())
@@ -74,8 +87,12 @@ public sealed class BusinessDetailsViewModel : INotifyPropertyChanged, INotifyDa
 
     public IReadOnlyList<GstState> States { get; } = GstState.All;
 
-    /// <summary>The Registration Types that can be chosen. Regular and Composition come later.</summary>
-    public IReadOnlyList<RegistrationType> RegistrationTypes { get; } = [RegistrationType.Unregistered];
+    public IReadOnlyList<RegistrationType> RegistrationTypes { get; } =
+    [
+        BusinessDetails.RegistrationType.Regular,
+        BusinessDetails.RegistrationType.Composition,
+        BusinessDetails.RegistrationType.Unregistered,
+    ];
 
     /// <summary>Saves, then closes the screen; while there are errors, only shows them.</summary>
     public ICommand SaveCommand { get; }
@@ -113,10 +130,17 @@ public sealed class BusinessDetailsViewModel : INotifyPropertyChanged, INotifyDa
         set => SetAndCheck(ref _city, value);
     }
 
+    /// <summary>Filled in from the GSTIN, and can't be changed, while the GSTIN is valid.</summary>
     public GstState? State
     {
         get => _state;
-        set => SetAndCheck(ref _state, value);
+        set
+        {
+            if (!AreStateAndPanLocked)
+            {
+                SetAndCheck(ref _state, value);
+            }
+        }
     }
 
     public string Pin
@@ -125,17 +149,61 @@ public sealed class BusinessDetailsViewModel : INotifyPropertyChanged, INotifyDa
         set => SetAndCheck(ref _pin, value);
     }
 
-    public RegistrationType RegistrationType
+    /// <summary>Null until one is chosen: a new Business has none.</summary>
+    public RegistrationType? RegistrationType
     {
         get => _registrationType;
-        set => SetAndCheck(ref _registrationType, value);
+        set
+        {
+            SetAndCheck(ref _registrationType, value);
+            OnPropertyChanged(nameof(IsGstinApplicable));
+
+            // An Unregistered Business has no GSTIN; the PAN keeps its value and unlocks.
+            if (!IsGstinApplicable)
+            {
+                SetAndCheck(ref _gstin, "", nameof(Gstin));
+            }
+
+            Check(nameof(Gstin));
+            FillInFromGstin();
+        }
     }
 
+    /// <summary>Whether the Business has a GSTIN: true for Regular and Composition.</summary>
+    public bool IsGstinApplicable =>
+        RegistrationType is BusinessDetails.RegistrationType.Regular or BusinessDetails.RegistrationType.Composition;
+
+    public string Gstin
+    {
+        get => _gstin;
+        set
+        {
+            SetAndCheck(ref _gstin, value);
+            FillInFromGstin();
+        }
+    }
+
+    /// <summary>
+    /// Whether State and PAN come from the GSTIN, so can't be edited: true while a Regular or
+    /// Composition Business has a valid GSTIN.
+    /// </summary>
+    public bool AreStateAndPanLocked => ValidGstin is not null;
+
+    /// <summary>Filled in from the GSTIN, and can't be changed, while the GSTIN is valid.</summary>
     public string Pan
     {
         get => _pan;
-        set => SetAndCheck(ref _pan, value);
+        set
+        {
+            if (!AreStateAndPanLocked)
+            {
+                SetAndCheck(ref _pan, value);
+            }
+        }
     }
+
+    /// <summary>The GSTIN, if it applies and is valid; otherwise null.</summary>
+    private Gst.Gstin? ValidGstin => IsGstinApplicable ? Gst.Gstin.Check(Gstin).Value : null;
 
     /// <summary>Whether the one Business has been saved yet. Until it has, Billow can't bill.</summary>
     public static bool HasSavedBusiness(Func<BillowDbContext> openDatabase)
@@ -144,7 +212,10 @@ public sealed class BusinessDetailsViewModel : INotifyPropertyChanged, INotifyDa
         return db.Businesses.Any();
     }
 
-    /// <summary>Stores the details as the one Business. False if nothing was saved.</summary>
+    /// <summary>
+    /// Stores the details as the one Business. Changing the Registration Type or GSTIN of a saved
+    /// Business needs confirming first. False if nothing was saved.
+    /// </summary>
     public bool Save()
     {
         foreach (var field in _rules.Keys)
@@ -159,6 +230,14 @@ public sealed class BusinessDetailsViewModel : INotifyPropertyChanged, INotifyDa
 
         using var db = _openDatabase();
         var business = db.Businesses.SingleOrDefault();
+        var gstin = ValidGstin?.Value;
+        if (business is not null
+            && (business.RegistrationType != RegistrationType || business.Gstin != gstin)
+            && !_confirmationPrompt.Confirm(ChangeAppliesToNewBillsOnly))
+        {
+            return false;
+        }
+
         if (business is null)
         {
             business = new Business();
@@ -172,7 +251,8 @@ public sealed class BusinessDetailsViewModel : INotifyPropertyChanged, INotifyDa
         business.City = City.Trim();
         business.StateCode = State!.Code;
         business.Pin = Pin.Trim();
-        business.RegistrationType = RegistrationType;
+        business.RegistrationType = RegistrationType!.Value;
+        business.Gstin = gstin;
         business.Pan = IsBlank(Pan) ? null : Gst.Pan.Check(Pan).Value!.Value;
 
         db.SaveChanges();
@@ -225,7 +305,8 @@ public sealed class BusinessDetailsViewModel : INotifyPropertyChanged, INotifyDa
         _city = business?.City ?? "";
         _state = business is null ? null : GstState.Find(business.StateCode);
         _pin = business?.Pin ?? "";
-        _registrationType = business?.RegistrationType ?? RegistrationType.Unregistered;
+        _registrationType = business?.RegistrationType;
+        _gstin = business?.Gstin ?? "";
         _pan = business?.Pan ?? "";
 
         var fieldsWithErrors = _errors.Keys.ToList();
@@ -237,6 +318,18 @@ public sealed class BusinessDetailsViewModel : INotifyPropertyChanged, INotifyDa
 
         // An empty name means every property changed.
         OnPropertyChanged("");
+    }
+
+    /// <summary>Fills in State and PAN from a valid GSTIN, locking them; unlocks them otherwise.</summary>
+    private void FillInFromGstin()
+    {
+        if (ValidGstin is { } gstin)
+        {
+            SetAndCheck(ref _state, GstState.Find(gstin.StateCode), nameof(State));
+            SetAndCheck(ref _pan, gstin.Pan.Value, nameof(Pan));
+        }
+
+        OnPropertyChanged(nameof(AreStateAndPanLocked));
     }
 
     private static bool IsBlank(string value) => string.IsNullOrWhiteSpace(value);

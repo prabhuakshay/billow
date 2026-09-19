@@ -6,11 +6,12 @@ namespace Billow.Tests.BusinessDetails;
 public sealed class BusinessDetailsViewModelTests : IDisposable
 {
     private readonly TestDatabase _database = new();
+    private readonly FakeConfirmationPrompt _confirmationPrompt = new();
 
     public void Dispose() => _database.Dispose();
 
     private BusinessDetailsViewModel OpenScreen() =>
-        new(_database.Open, new FakeConfirmationPrompt(), new FakeLogoFilePicker());
+        new(_database.Open, _confirmationPrompt, new FakeLogoFilePicker());
 
     private BusinessDetailsViewModel OpenScreenWithValidDetails()
     {
@@ -20,7 +21,19 @@ public sealed class BusinessDetailsViewModelTests : IDisposable
         screen.City = "Pune";
         screen.State = GstState.Find("27");
         screen.Pin = "411001";
+        screen.RegistrationType = RegistrationType.Unregistered;
         return screen;
+    }
+
+    /// <summary>Saves a Business with a GSTIN, then opens the screen on it.</summary>
+    private BusinessDetailsViewModel OpenScreenOnSavedBusinessWithGstin(
+        RegistrationType registrationType = RegistrationType.Regular)
+    {
+        var screen = OpenScreenWithValidDetails();
+        screen.RegistrationType = registrationType;
+        screen.Gstin = "27AAPFU0939F1ZV";
+        Assert.True(screen.Save());
+        return OpenScreen();
     }
 
     [Fact]
@@ -34,6 +47,7 @@ public sealed class BusinessDetailsViewModelTests : IDisposable
         screen.City = "Pune";
         screen.State = GstState.Find("27");
         screen.Pin = "411001";
+        screen.RegistrationType = RegistrationType.Unregistered;
         screen.Pan = "ABCPK1234L";
 
         Assert.True(screen.Save());
@@ -62,6 +76,7 @@ public sealed class BusinessDetailsViewModelTests : IDisposable
         Assert.Equal("Enter the city.", screen.ErrorFor(nameof(screen.City)));
         Assert.Equal("Choose the State.", screen.ErrorFor(nameof(screen.State)));
         Assert.Equal("Enter the 6-digit PIN.", screen.ErrorFor(nameof(screen.Pin)));
+        Assert.Equal("Choose the Registration Type.", screen.ErrorFor(nameof(screen.RegistrationType)));
         Assert.Null(screen.ErrorFor(nameof(screen.TradeName)));
         Assert.Null(screen.ErrorFor(nameof(screen.AddressLine2)));
         Assert.Null(screen.ErrorFor(nameof(screen.Pan)));
@@ -175,6 +190,244 @@ public sealed class BusinessDetailsViewModelTests : IDisposable
         Assert.Equal("ABCPK1234L", OpenScreen().Pan);
     }
 
+    [Theory]
+    [InlineData(RegistrationType.Regular)]
+    [InlineData(RegistrationType.Composition)]
+    public void ARegularOrCompositionBusinessNeedsAGstin(RegistrationType registrationType)
+    {
+        var screen = OpenScreenWithValidDetails();
+        screen.RegistrationType = registrationType;
+
+        Assert.True(screen.IsGstinApplicable);
+        Assert.False(screen.Save());
+        Assert.Equal("Enter the GSTIN.", screen.ErrorFor(nameof(screen.Gstin)));
+        Assert.False(BusinessDetailsViewModel.HasSavedBusiness(_database.Open));
+    }
+
+    [Theory]
+    [InlineData("27AAPFU0939F1Z", "A GSTIN has 15 characters; this has 14.")]
+    [InlineData("27AAPFU0939F1ZX", "The last character of this GSTIN does not match the rest; check it for a typing mistake.")]
+    [InlineData("27AAPDU0939F1ZV", "Characters 3–12 of a GSTIN are its PAN. The 4th letter of a PAN must be one of P, C, H, F, A, T, B, L, J or G.")]
+    public void AnInvalidGstinShowsWhyAndBlocksSave(string gstin, string error)
+    {
+        var screen = OpenScreenWithValidDetails();
+        screen.RegistrationType = RegistrationType.Regular;
+
+        screen.Gstin = gstin;
+
+        Assert.Equal(error, screen.ErrorFor(nameof(screen.Gstin)));
+        Assert.False(screen.Save());
+        Assert.False(BusinessDetailsViewModel.HasSavedBusiness(_database.Open));
+    }
+
+    [Theory]
+    [InlineData(RegistrationType.Regular)]
+    [InlineData(RegistrationType.Composition)]
+    public void ARegularOrCompositionBusinessIsSavedWithItsGstinNormalised(RegistrationType registrationType)
+    {
+        var screen = OpenScreenWithValidDetails();
+        screen.RegistrationType = registrationType;
+        screen.Gstin = " 27aapfu0939f1zv ";
+
+        Assert.Null(screen.ErrorFor(nameof(screen.Gstin)));
+        Assert.True(screen.Save());
+
+        var reopened = OpenScreen();
+        Assert.Equal(registrationType, reopened.RegistrationType);
+        Assert.Equal("27AAPFU0939F1ZV", reopened.Gstin);
+    }
+
+    [Fact]
+    public void AValidGstinFillsInAndLocksStateAndPan()
+    {
+        var screen = OpenScreenWithValidDetails();
+        screen.RegistrationType = RegistrationType.Regular;
+        Assert.False(screen.AreStateAndPanLocked);
+
+        screen.Gstin = "29aaacb2894g1zj";
+
+        Assert.True(screen.AreStateAndPanLocked);
+        Assert.Equal(GstState.Find("29"), screen.State);
+        Assert.Equal("AAACB2894G", screen.Pan);
+        Assert.True(screen.Save());
+
+        var reopened = OpenScreen();
+        Assert.True(reopened.AreStateAndPanLocked);
+        Assert.Equal(GstState.Find("29"), reopened.State);
+        Assert.Equal("AAACB2894G", reopened.Pan);
+    }
+
+    [Fact]
+    public void LockedStateAndPanCannotBeChanged()
+    {
+        var screen = OpenScreenWithValidDetails();
+        screen.RegistrationType = RegistrationType.Regular;
+        screen.Gstin = "29AAACB2894G1ZJ";
+
+        screen.State = GstState.Find("07");
+        screen.Pan = "ABCPK1234L";
+
+        Assert.Equal(GstState.Find("29"), screen.State);
+        Assert.Equal("AAACB2894G", screen.Pan);
+    }
+
+    [Fact]
+    public void StateAndPanUnlockWhenTheGstinStopsBeingValid()
+    {
+        var screen = OpenScreenWithValidDetails();
+        screen.RegistrationType = RegistrationType.Regular;
+        screen.Gstin = "29AAACB2894G1ZJ";
+
+        screen.Gstin = "29AAACB2894G1Z";
+
+        Assert.False(screen.AreStateAndPanLocked);
+        Assert.Equal(GstState.Find("29"), screen.State);
+        Assert.Equal("AAACB2894G", screen.Pan);
+
+        screen.State = GstState.Find("07");
+        Assert.Equal(GstState.Find("07"), screen.State);
+    }
+
+    [Fact]
+    public void SwitchingToUnregisteredClearsTheGstinKeepsThePanAndUnlocksIt()
+    {
+        var screen = OpenScreenWithValidDetails();
+        screen.RegistrationType = RegistrationType.Composition;
+        screen.Gstin = "29AAACB2894G1ZJ";
+
+        screen.RegistrationType = RegistrationType.Unregistered;
+
+        Assert.Equal("", screen.Gstin);
+        Assert.False(screen.IsGstinApplicable);
+        Assert.False(screen.AreStateAndPanLocked);
+        Assert.Equal("AAACB2894G", screen.Pan);
+        Assert.Equal(GstState.Find("29"), screen.State);
+
+        screen.Pan = "ABCPK1234L";
+        Assert.Equal("ABCPK1234L", screen.Pan);
+    }
+
+    [Fact]
+    public void SwitchingToUnregisteredClearsAGstinError()
+    {
+        var screen = OpenScreenWithValidDetails();
+        screen.RegistrationType = RegistrationType.Regular;
+        screen.Gstin = "27AAPFU0939F1ZX";
+
+        screen.RegistrationType = RegistrationType.Unregistered;
+
+        Assert.Null(screen.ErrorFor(nameof(screen.Gstin)));
+        Assert.True(screen.Save());
+    }
+
+    [Fact]
+    public void SavingABusinessForTheFirstTimeDoesNotAskForConfirmation()
+    {
+        var screen = OpenScreenWithValidDetails();
+        screen.RegistrationType = RegistrationType.Regular;
+        screen.Gstin = "27AAPFU0939F1ZV";
+
+        Assert.True(screen.Save());
+        Assert.Empty(_confirmationPrompt.Questions);
+    }
+
+    [Fact]
+    public void ChangingTheRegistrationTypeOfASavedBusinessAsksForConfirmation()
+    {
+        OpenScreenWithValidDetails().Save();
+        var screen = OpenScreen();
+        screen.RegistrationType = RegistrationType.Regular;
+        screen.Gstin = "27AAPFU0939F1ZV";
+
+        Assert.True(screen.Save());
+
+        Assert.Equal([ChangeAppliesToNewBillsOnly], _confirmationPrompt.Questions);
+        Assert.Equal(RegistrationType.Regular, OpenScreen().RegistrationType);
+    }
+
+    [Fact]
+    public void SwitchingBetweenRegularAndCompositionAsksForConfirmation()
+    {
+        var screen = OpenScreenOnSavedBusinessWithGstin(RegistrationType.Composition);
+
+        screen.RegistrationType = RegistrationType.Regular;
+
+        Assert.True(screen.Save());
+        Assert.Equal([ChangeAppliesToNewBillsOnly], _confirmationPrompt.Questions);
+    }
+
+    [Fact]
+    public void ChangingTheGstinOfASavedBusinessAsksForConfirmation()
+    {
+        var screen = OpenScreenOnSavedBusinessWithGstin();
+
+        screen.Gstin = "29AAACB2894G1ZJ";
+
+        Assert.True(screen.Save());
+        Assert.Equal([ChangeAppliesToNewBillsOnly], _confirmationPrompt.Questions);
+        Assert.Equal("29AAACB2894G1ZJ", OpenScreen().Gstin);
+    }
+
+    [Fact]
+    public void DecliningTheConfirmationSavesNothingAndKeepsTheScreenOpen()
+    {
+        OpenScreenWithValidDetails().Save();
+        var screen = OpenScreen();
+        var closed = false;
+        screen.CloseRequested += (_, _) => closed = true;
+        screen.City = "Mumbai";
+        screen.RegistrationType = RegistrationType.Regular;
+        screen.Gstin = "27AAPFU0939F1ZV";
+        _confirmationPrompt.Answer = false;
+
+        screen.SaveCommand.Execute(null);
+
+        Assert.False(closed);
+        Assert.Single(_confirmationPrompt.Questions);
+        var reopened = OpenScreen();
+        Assert.Equal(RegistrationType.Unregistered, reopened.RegistrationType);
+        Assert.Equal("", reopened.Gstin);
+        Assert.Equal("Pune", reopened.City);
+    }
+
+    [Fact]
+    public void OtherChangesToASavedBusinessDoNotAskForConfirmation()
+    {
+        var screen = OpenScreenOnSavedBusinessWithGstin();
+
+        screen.City = "Mumbai";
+        screen.Gstin = " 27aapfu0939f1zv "; // the same GSTIN, typed differently
+
+        Assert.True(screen.Save());
+        Assert.Empty(_confirmationPrompt.Questions);
+        Assert.Equal("Mumbai", OpenScreen().City);
+    }
+
+    [Fact]
+    public void CancelPutsBackTheSavedRegistrationTypeAndGstin()
+    {
+        var screen = OpenScreenOnSavedBusinessWithGstin();
+        screen.RegistrationType = RegistrationType.Unregistered;
+
+        screen.CancelCommand.Execute(null);
+
+        Assert.Equal(RegistrationType.Regular, screen.RegistrationType);
+        Assert.Equal("27AAPFU0939F1ZV", screen.Gstin);
+        Assert.True(screen.AreStateAndPanLocked);
+        Assert.Equal("AAPFU0939F", screen.Pan);
+    }
+
+    [Fact]
+    public void GstinDoesNotApplyToAnUnregisteredBusiness()
+    {
+        var screen = OpenScreenWithValidDetails();
+
+        Assert.False(screen.IsGstinApplicable);
+        Assert.Null(screen.ErrorFor(nameof(screen.Gstin)));
+        Assert.True(screen.Save());
+        Assert.Equal("", OpenScreen().Gstin);
+    }
+
     [Fact]
     public void DevanagariTextIsSavedAndShownAsTyped()
     {
@@ -223,12 +476,14 @@ public sealed class BusinessDetailsViewModelTests : IDisposable
     }
 
     [Fact]
-    public void UnregisteredIsTheOnlyRegistrationTypeOfferedAndIsChosenAtFirst()
+    public void EveryRegistrationTypeIsOfferedAndNoneIsChosenAtFirst()
     {
         var screen = OpenScreen();
 
-        Assert.Equal([RegistrationType.Unregistered], screen.RegistrationTypes);
-        Assert.Equal(RegistrationType.Unregistered, screen.RegistrationType);
+        Assert.Equal(
+            [RegistrationType.Regular, RegistrationType.Composition, RegistrationType.Unregistered],
+            screen.RegistrationTypes);
+        Assert.Null(screen.RegistrationType);
     }
 
     [Fact]
@@ -307,6 +562,10 @@ public sealed class BusinessDetailsViewModelTests : IDisposable
 
         Assert.False(BusinessDetailsViewModel.HasSavedBusiness(_database.Open));
     }
+
+    private const string ChangeAppliesToNewBillsOnly =
+        "Changing the Registration Type or GSTIN applies to new Bills only. Bills already issued "
+        + "keep the details they were printed with.\n\nSave the change?";
 
     private static void SetText(BusinessDetailsViewModel screen, string field, string value)
     {

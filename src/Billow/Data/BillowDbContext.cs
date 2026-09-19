@@ -36,6 +36,7 @@ public class BillowDbContext : DbContext
         {
             business.Property(b => b.StateCode).HasMaxLength(2);
             business.Property(b => b.Pin).HasMaxLength(6);
+            business.Property(b => b.Gstin).HasMaxLength(15);
             business.Property(b => b.Pan).HasMaxLength(10);
             business.Property(b => b.RegistrationType).HasConversion<string>();
         });
