@@ -23,10 +23,47 @@ Simple billing software for Windows, with optional inventory management.
 dotnet run --project src/Billow
 ```
 
+## Installing
+
+Download `Billow-win-Setup.exe` from the [latest release](https://github.com/prabhuakshay/billow/releases/latest) and run it. No administrator rights or separate .NET install needed — it adds Start menu and desktop shortcuts.
+
+## Where data is stored
+
+All data is kept in a SQLite database at:
+
+```
+%LocalAppData%\BillowData\billow.db
+```
+
+It is separate from the program files, so updating, reinstalling or uninstalling Billow does **not** delete it. To back up, copy this file while Billow is closed.
+
+## Building the installer
+
+```
+.\build-installer.ps1                  # version from Billow.csproj
+.\build-installer.ps1 -Version 0.2.0   # or a specific version
+```
+
+The installer is written to `releases\Billow-win-Setup.exe`.
+
+## Publishing a release
+
+Push a version tag and GitHub Actions builds the installer and publishes a GitHub Release:
+
+```
+git tag v0.2.0
+git push origin v0.2.0
+```
+
+Tags with a suffix, such as `v0.2.0-beta.1`, are published as pre-releases.
+
 ## Project layout
 
 ```
-Billow.sln          Solution file — open this in Visual Studio
-global.json         Pins the .NET SDK version
-src/Billow/         The desktop app (WPF, .NET 10)
+Billow.sln                  Solution file — open this in Visual Studio
+global.json                 Pins the .NET SDK version
+build-installer.ps1         Builds the installer
+.github/workflows/          Release automation
+src/Billow/                 The desktop app (WPF, .NET 10)
+src/Billow/Data/            Database (SQLite via Entity Framework Core)
 ```

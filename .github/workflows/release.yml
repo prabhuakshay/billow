@@ -1,0 +1,69 @@
+# Builds the Billow installer and publishes it as a GitHub Release.
+#
+# Triggered by pushing a version tag:
+#   git tag v0.2.0
+#   git push origin v0.2.0
+#
+# Tags with a suffix (e.g. v0.2.0-beta.1) are published as pre-releases.
+
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v7
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Work out version from tag
+        id: version
+        shell: pwsh
+        run: |
+          $version = '${{ github.ref_name }}' -replace '^v', ''
+          if ($version -notmatch '^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$') {
+            throw "Tag '${{ github.ref_name }}' is not a valid version tag. Use e.g. v1.2.3 or v1.2.3-beta.1"
+          }
+          "version=$version" >> $env:GITHUB_OUTPUT
+          "prerelease=$(if ($version.Contains('-')) { 'true' } else { 'false' })" >> $env:GITHUB_OUTPUT
+
+      - name: Restore tools
+        run: dotnet tool restore
+
+      # Fetching the previous release lets Velopack build small "delta" updates.
+      # Fails harmlessly on the very first release.
+      - name: Download previous release
+        continue-on-error: true
+        run: >
+          dotnet vpk download github
+          --repoUrl ${{ github.server_url }}/${{ github.repository }}
+          --token ${{ secrets.GITHUB_TOKEN }}
+          --outputDir releases
+
+      - name: Build installer
+        shell: pwsh
+        run: ./build-installer.ps1 -Version ${{ steps.version.outputs.version }}
+
+      - name: Publish GitHub Release
+        run: >
+          dotnet vpk upload github
+          --repoUrl ${{ github.server_url }}/${{ github.repository }}
+          --token ${{ secrets.GITHUB_TOKEN }}
+          --outputDir releases
+          --tag ${{ github.ref_name }}
+          --releaseName "Billow ${{ steps.version.outputs.version }}"
+          --pre ${{ steps.version.outputs.prerelease }}
+          --publish true
