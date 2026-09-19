@@ -7,6 +7,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{66693302-119
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Billow", "src\Billow\Billow.csproj", "{E5B77398-A922-4359-B12A-CD11EF47C5B3}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{0AB3BF05-4346-4AA6-1389-037BE0695223}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Billow.Tests", "tests\Billow.Tests\Billow.Tests.csproj", "{B1F8E289-277B-45EA-96DC-EBEA41D9992B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -20,8 +24,13 @@ Global
 		{E5B77398-A922-4359-B12A-CD11EF47C5B3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E5B77398-A922-4359-B12A-CD11EF47C5B3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E5B77398-A922-4359-B12A-CD11EF47C5B3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B1F8E289-277B-45EA-96DC-EBEA41D9992B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B1F8E289-277B-45EA-96DC-EBEA41D9992B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B1F8E289-277B-45EA-96DC-EBEA41D9992B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B1F8E289-277B-45EA-96DC-EBEA41D9992B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{E5B77398-A922-4359-B12A-CD11EF47C5B3} = {66693302-1199-43EA-81B2-EB815F109A48}
+		{B1F8E289-277B-45EA-96DC-EBEA41D9992B} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 	EndGlobalSection
 EndGlobal

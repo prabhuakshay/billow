@@ -12,7 +12,13 @@
          "name": "build",
          "group": "pre-commit",
          "command": "dotnet",
-         "args": [ "build", "src/Billow/Billow.csproj", "--nologo", "-v", "q", "-o", "artifacts/pre-commit" ]
+         "args": [ "build", "--nologo", "-v", "q", "--artifacts-path", "artifacts/pre-commit" ]
+      },
+      {
+         "name": "test",
+         "group": "pre-commit",
+         "command": "dotnet",
+         "args": [ "test", "--no-build", "--no-progress", "--no-ansi", "--artifacts-path", "artifacts/pre-commit" ]
       }
    ]
 }
