@@ -49,6 +49,24 @@
                 </Trigger>
             </Style.Triggers>
         </Style>
+
+        <!-- A field with its error under it. The field is the Content. -->
+        <Style x:Key="WithError" TargetType="ContentControl">
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="IsTabStop" Value="False" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ContentControl">
+                        <StackPanel>
+                            <ContentPresenter />
+                            <TextBlock Style="{StaticResource FieldError}"
+                                       Text="{Binding Content.(Validation.Errors)/ErrorContent,
+                                                      RelativeSource={RelativeSource TemplatedParent}}" />
+                        </StackPanel>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
 
     <DockPanel>
@@ -70,10 +88,10 @@
 
                     <Label Content="_Legal Name (required)" Target="{Binding ElementName=LegalNameBox}"
                            Style="{StaticResource FieldLabel}" />
-                    <TextBox x:Name="LegalNameBox"
-                             Text="{Binding LegalName, UpdateSourceTrigger=PropertyChanged}" />
-                    <TextBlock Style="{StaticResource FieldError}"
-                               Text="{Binding (Validation.Errors)/ErrorContent, ElementName=LegalNameBox}" />
+                    <ContentControl Style="{StaticResource WithError}">
+                        <TextBox x:Name="LegalNameBox"
+                                 Text="{Binding LegalName, UpdateSourceTrigger=PropertyChanged}" />
+                    </ContentControl>
 
                     <Label Content="_Trade Name" Target="{Binding ElementName=TradeNameBox}"
                            Style="{StaticResource FieldLabel}" />
@@ -84,10 +102,10 @@
 
                     <Label Content="Line _1 (required)" Target="{Binding ElementName=AddressLine1Box}"
                            Style="{StaticResource FieldLabel}" />
-                    <TextBox x:Name="AddressLine1Box"
-                             Text="{Binding AddressLine1, UpdateSourceTrigger=PropertyChanged}" />
-                    <TextBlock Style="{StaticResource FieldError}"
-                               Text="{Binding (Validation.Errors)/ErrorContent, ElementName=AddressLine1Box}" />
+                    <ContentControl Style="{StaticResource WithError}">
+                        <TextBox x:Name="AddressLine1Box"
+                                 Text="{Binding AddressLine1, UpdateSourceTrigger=PropertyChanged}" />
+                    </ContentControl>
 
                     <Label Content="Line _2" Target="{Binding ElementName=AddressLine2Box}"
                            Style="{StaticResource FieldLabel}" />
@@ -96,65 +114,65 @@
 
                     <Label Content="_City (required)" Target="{Binding ElementName=CityBox}"
                            Style="{StaticResource FieldLabel}" />
-                    <TextBox x:Name="CityBox"
-                             Text="{Binding City, UpdateSourceTrigger=PropertyChanged}" />
-                    <TextBlock Style="{StaticResource FieldError}"
-                               Text="{Binding (Validation.Errors)/ErrorContent, ElementName=CityBox}" />
+                    <ContentControl Style="{StaticResource WithError}">
+                        <TextBox x:Name="CityBox"
+                                 Text="{Binding City, UpdateSourceTrigger=PropertyChanged}" />
+                    </ContentControl>
 
                     <Label Content="St_ate (required)" Target="{Binding ElementName=StateBox}"
                            Style="{StaticResource FieldLabel}" />
-                    <ComboBox x:Name="StateBox" ItemsSource="{Binding States}"
-                              SelectedItem="{Binding State}">
-                        <ComboBox.Style>
-                            <!-- Locked while it is filled in from a valid GSTIN. -->
-                            <Style TargetType="ComboBox">
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding AreStateAndPanLocked}" Value="True">
-                                        <Setter Property="IsEnabled" Value="False" />
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </ComboBox.Style>
-                    </ComboBox>
-                    <TextBlock Style="{StaticResource FieldError}"
-                               Text="{Binding (Validation.Errors)/ErrorContent, ElementName=StateBox}" />
+                    <ContentControl Style="{StaticResource WithError}">
+                        <ComboBox x:Name="StateBox" ItemsSource="{Binding States}"
+                                  SelectedItem="{Binding State}">
+                            <ComboBox.Style>
+                                <!-- Locked while it is filled in from a valid GSTIN. -->
+                                <Style TargetType="ComboBox">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding AreStateAndPanLocked}" Value="True">
+                                            <Setter Property="IsEnabled" Value="False" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </ComboBox.Style>
+                        </ComboBox>
+                    </ContentControl>
 
                     <Label Content="_PIN (required)" Target="{Binding ElementName=PinBox}"
                            Style="{StaticResource FieldLabel}" />
-                    <TextBox x:Name="PinBox" Width="100" HorizontalAlignment="Left"
-                             Text="{Binding Pin, UpdateSourceTrigger=PropertyChanged}" />
-                    <TextBlock Style="{StaticResource FieldError}"
-                               Text="{Binding (Validation.Errors)/ErrorContent, ElementName=PinBox}" />
+                    <ContentControl Style="{StaticResource WithError}">
+                        <TextBox x:Name="PinBox" Width="100" HorizontalAlignment="Left"
+                                 Text="{Binding Pin, UpdateSourceTrigger=PropertyChanged}" />
+                    </ContentControl>
 
                     <TextBlock Text="GST" Style="{StaticResource SectionHeading}" />
 
                     <Label Content="_Registration Type (required)" Target="{Binding ElementName=RegistrationTypeBox}"
                            Style="{StaticResource FieldLabel}" />
-                    <ComboBox x:Name="RegistrationTypeBox" Width="200" HorizontalAlignment="Left"
-                              ItemsSource="{Binding RegistrationTypes}"
-                              SelectedItem="{Binding RegistrationType}" />
-                    <TextBlock Style="{StaticResource FieldError}"
-                               Text="{Binding (Validation.Errors)/ErrorContent, ElementName=RegistrationTypeBox}" />
+                    <ContentControl Style="{StaticResource WithError}">
+                        <ComboBox x:Name="RegistrationTypeBox" Width="200" HorizontalAlignment="Left"
+                                  ItemsSource="{Binding RegistrationTypes}"
+                                  SelectedItem="{Binding RegistrationType}" />
+                    </ContentControl>
 
                     <!-- Only a Regular or Composition Business has a GSTIN. -->
                     <StackPanel Visibility="{Binding IsGstinApplicable, Converter={StaticResource BooleanToVisibility}}">
                         <Label Content="_GSTIN (required)" Target="{Binding ElementName=GstinBox}"
                                Style="{StaticResource FieldLabel}" />
-                        <TextBox x:Name="GstinBox" Width="200" HorizontalAlignment="Left"
-                                 CharacterCasing="Upper"
-                                 Text="{Binding Gstin, UpdateSourceTrigger=PropertyChanged}" />
-                        <TextBlock Style="{StaticResource FieldError}"
-                                   Text="{Binding (Validation.Errors)/ErrorContent, ElementName=GstinBox}" />
+                        <ContentControl Style="{StaticResource WithError}">
+                            <TextBox x:Name="GstinBox" Width="200" HorizontalAlignment="Left"
+                                     CharacterCasing="Upper"
+                                     Text="{Binding Gstin, UpdateSourceTrigger=PropertyChanged}" />
+                        </ContentControl>
                     </StackPanel>
 
                     <Label Content="PA_N" Target="{Binding ElementName=PanBox}"
                            Style="{StaticResource FieldLabel}" />
-                    <TextBox x:Name="PanBox" Width="160" HorizontalAlignment="Left"
-                             CharacterCasing="Upper"
-                             IsReadOnly="{Binding AreStateAndPanLocked}"
-                             Text="{Binding Pan, UpdateSourceTrigger=PropertyChanged}" />
-                    <TextBlock Style="{StaticResource FieldError}"
-                               Text="{Binding (Validation.Errors)/ErrorContent, ElementName=PanBox}" />
+                    <ContentControl Style="{StaticResource WithError}">
+                        <TextBox x:Name="PanBox" Width="160" HorizontalAlignment="Left"
+                                 CharacterCasing="Upper"
+                                 IsReadOnly="{Binding AreStateAndPanLocked}"
+                                 Text="{Binding Pan, UpdateSourceTrigger=PropertyChanged}" />
+                    </ContentControl>
 
                     <TextBlock Text="Additional Registrations" Style="{StaticResource SectionHeading}" />
                     <TextBlock Text="Printed on Bills in this order, such as an FSSAI licence or a Drug Licence."
@@ -170,21 +188,21 @@
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="Auto" />
-                                    </Grid.RowDefinitions>
 
                                     <!-- Suggests the common labels. Any other text may be typed, so it doesn't auto-complete. -->
-                                    <ComboBox x:Name="LabelBox" IsEditable="True" IsTextSearchEnabled="False"
-                                              AutomationProperties.Name="Label"
-                                              ItemsSource="{Binding DataContext.SuggestedAdditionalRegistrationLabels,
-                                                                    ElementName=AdditionalRegistrationsList}"
-                                              Text="{Binding Label, UpdateSourceTrigger=PropertyChanged}" />
-                                    <TextBox x:Name="NumberBox" Grid.Column="1" Margin="6,0,0,0"
-                                             AutomationProperties.Name="Number"
-                                             Text="{Binding Number, UpdateSourceTrigger=PropertyChanged}" />
-                                    <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="6,0,0,0">
+                                    <ContentControl Style="{StaticResource WithError}">
+                                        <ComboBox IsEditable="True" IsTextSearchEnabled="False"
+                                                  AutomationProperties.Name="Label"
+                                                  ItemsSource="{Binding DataContext.SuggestedAdditionalRegistrationLabels,
+                                                                        ElementName=AdditionalRegistrationsList}"
+                                                  Text="{Binding Label, UpdateSourceTrigger=PropertyChanged}" />
+                                    </ContentControl>
+                                    <ContentControl Grid.Column="1" Margin="6,0,0,0" Style="{StaticResource WithError}">
+                                        <TextBox AutomationProperties.Name="Number"
+                                                 Text="{Binding Number, UpdateSourceTrigger=PropertyChanged}" />
+                                    </ContentControl>
+                                    <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="6,0,0,0"
+                                                VerticalAlignment="Top">
                                         <Button Content="▲" Width="24" ToolTip="Move up"
                                                 AutomationProperties.Name="Move up"
                                                 Command="{Binding MoveUpCommand}" />
@@ -194,12 +212,6 @@
                                         <Button Content="Remove" Padding="6,0" Margin="6,0,0,0"
                                                 Command="{Binding RemoveCommand}" />
                                     </StackPanel>
-
-                                    <TextBlock Grid.Row="1" Style="{StaticResource FieldError}"
-                                               Text="{Binding (Validation.Errors)/ErrorContent, ElementName=LabelBox}" />
-                                    <TextBlock Grid.Row="1" Grid.Column="1" Margin="6,2,0,0"
-                                               Style="{StaticResource FieldError}"
-                                               Text="{Binding (Validation.Errors)/ErrorContent, ElementName=NumberBox}" />
                                 </Grid>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
