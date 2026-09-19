@@ -94,5 +94,6 @@ build-installer.ps1         Builds the installer
 .github/workflows/          Release automation
 src/Billow/                 The desktop app (WPF, .NET 10)
 src/Billow/Data/            Database (SQLite via Entity Framework Core)
+src/Billow/Gst/             GSTIN and PAN checks, GST state list
 tests/Billow.Tests/         Unit tests (xUnit v3)
 ```
