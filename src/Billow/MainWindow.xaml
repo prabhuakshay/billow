@@ -28,51 +28,8 @@
             <Separator DockPanel.Dock="Right" />
         </StatusBar>
 
-        <Grid>
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="220" MinWidth="160" />
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="*" MinWidth="400" />
-            </Grid.ColumnDefinitions>
-
-            <!-- Navigation pane -->
-            <DockPanel Grid.Column="0">
-                <Border DockPanel.Dock="Top" Padding="8,5"
-                        Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}">
-                    <TextBlock Text="Navigation" FontWeight="SemiBold" />
-                </Border>
-                <TreeView x:Name="NavTree" BorderThickness="0,1,0,0" Padding="2,4"
-                          SelectedItemChanged="NavTree_SelectedItemChanged">
-                    <TreeViewItem Header="Sales" IsExpanded="True">
-                        <TreeViewItem Header="Invoices" />
-                        <TreeViewItem Header="Customers" />
-                    </TreeViewItem>
-                    <TreeViewItem Header="Inventory" IsExpanded="True">
-                        <TreeViewItem Header="Items" />
-                        <TreeViewItem Header="Stock" />
-                    </TreeViewItem>
-                    <TreeViewItem Header="Reports" />
-                </TreeView>
-            </DockPanel>
-
-            <GridSplitter Grid.Column="1" Width="4" HorizontalAlignment="Stretch"
-                          Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}" />
-
-            <!-- Work area -->
-            <Border Grid.Column="2" BorderThickness="1,0,0,0"
-                    BorderBrush="{DynamicResource {x:Static SystemColors.ControlDarkBrushKey}}"
-                    Background="{DynamicResource {x:Static SystemColors.WindowBrushKey}}">
-                <DockPanel>
-                    <Border DockPanel.Dock="Top" Padding="12,8" BorderThickness="0,0,0,1"
-                            BorderBrush="{DynamicResource {x:Static SystemColors.ControlDarkBrushKey}}">
-                        <TextBlock x:Name="PageTitle" FontSize="16" FontWeight="SemiBold" />
-                    </Border>
-
-                    <!-- Placeholder until the section's screen is built. -->
-                    <TextBlock Text="This section has not been built yet." Margin="12"
-                               Foreground="{DynamicResource {x:Static SystemColors.GrayTextBrushKey}}" />
-                </DockPanel>
-            </Border>
-        </Grid>
+        <!-- Work area. Empty until the main layout is decided. -->
+        <Border BorderThickness="0"
+                Background="{DynamicResource {x:Static SystemColors.WindowBrushKey}}" />
     </DockPanel>
 </Window>
