@@ -30,6 +30,15 @@
             </DockPanel>
         </Border>
 
+        <!-- The list narrows as the user types. -->
+        <DockPanel DockPanel.Dock="Top" Margin="12,10">
+            <Label DockPanel.Dock="Left" Content="_Search:" Target="{Binding ElementName=SearchBox}"
+                   Padding="0,0,8,0" VerticalAlignment="Center" />
+            <TextBox x:Name="SearchBox" VerticalContentAlignment="Center"
+                     Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                     ToolTip="Name, Trade Name, phone or GSTIN" />
+        </DockPanel>
+
         <!-- Double-clicking a row edits it. -->
         <DataGrid x:Name="CustomersGrid" ItemsSource="{Binding Customers}"
                   SelectedItem="{Binding SelectedCustomer}"
