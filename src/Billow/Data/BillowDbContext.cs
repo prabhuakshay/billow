@@ -39,6 +39,9 @@ public class BillowDbContext : DbContext
             business.Property(b => b.Gstin).HasMaxLength(15);
             business.Property(b => b.Pan).HasMaxLength(10);
             business.Property(b => b.RegistrationType).HasConversion<string>();
+            business.HasMany(b => b.AdditionalRegistrations).WithOne().HasForeignKey(r => r.BusinessId);
         });
+
+        modelBuilder.Entity<AdditionalRegistration>().ToTable("AdditionalRegistrations");
     }
 }

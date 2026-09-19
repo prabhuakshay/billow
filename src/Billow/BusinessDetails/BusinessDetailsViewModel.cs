@@ -1,9 +1,11 @@
 using System.Collections;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
 using Billow.Data;
 using Billow.Gst;
+using Microsoft.EntityFrameworkCore;
 
 namespace Billow.BusinessDetails;
 
@@ -73,6 +75,8 @@ public sealed class BusinessDetailsViewModel : INotifyPropertyChanged, INotifyDa
             }
         });
         CancelCommand = new RelayCommand(Cancel);
+        AddAdditionalRegistrationCommand = new RelayCommand(() => AddAdditionalRegistration("", ""));
+        AdditionalRegistrations.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasErrors));
         Load();
     }
 
@@ -83,7 +87,7 @@ public sealed class BusinessDetailsViewModel : INotifyPropertyChanged, INotifyDa
     /// <summary>Asks the window to close. The argument is true if the details were saved.</summary>
     public event EventHandler<bool>? CloseRequested;
 
-    public bool HasErrors => _errors.Count > 0;
+    public bool HasErrors => _errors.Count > 0 || AdditionalRegistrations.Any(row => row.HasErrors);
 
     public IReadOnlyList<GstState> States { get; } = GstState.All;
 
@@ -99,6 +103,16 @@ public sealed class BusinessDetailsViewModel : INotifyPropertyChanged, INotifyDa
 
     /// <summary>Puts back the saved details, then closes the screen.</summary>
     public ICommand CancelCommand { get; }
+
+    /// <summary>Adds an empty Additional Registration row at the end.</summary>
+    public ICommand AddAdditionalRegistrationCommand { get; }
+
+    /// <summary>Labels offered for an Additional Registration. Any other label may be typed.</summary>
+    public IReadOnlyList<string> SuggestedAdditionalRegistrationLabels { get; } =
+        ["FSSAI Lic. No.", "D.L. No.", "Udyam Reg. No.", "Shop Act Lic. No."];
+
+    /// <summary>The Additional Registrations, in the order they print.</summary>
+    public ObservableCollection<AdditionalRegistrationViewModel> AdditionalRegistrations { get; } = [];
 
     public string LegalName
     {
@@ -223,13 +237,18 @@ public sealed class BusinessDetailsViewModel : INotifyPropertyChanged, INotifyDa
             Check(field);
         }
 
+        foreach (var row in AdditionalRegistrations)
+        {
+            row.Check();
+        }
+
         if (HasErrors)
         {
             return false;
         }
 
         using var db = _openDatabase();
-        var business = db.Businesses.SingleOrDefault();
+        var business = db.Businesses.Include(b => b.AdditionalRegistrations).SingleOrDefault();
         var gstin = ValidGstin?.Value;
         if (business is not null
             && (business.RegistrationType != RegistrationType || business.Gstin != gstin)
@@ -254,6 +273,15 @@ public sealed class BusinessDetailsViewModel : INotifyPropertyChanged, INotifyDa
         business.RegistrationType = RegistrationType!.Value;
         business.Gstin = gstin;
         business.Pan = IsBlank(Pan) ? null : Gst.Pan.Check(Pan).Value!.Value;
+        business.AdditionalRegistrations.Clear();
+        business.AdditionalRegistrations.AddRange(AdditionalRegistrations
+            .Where(row => !row.IsEmpty)
+            .Select((row, position) => new AdditionalRegistration
+            {
+                Position = position,
+                Label = row.Label.Trim(),
+                Number = row.Number.Trim(),
+            }));
 
         db.SaveChanges();
         return true;
@@ -296,7 +324,7 @@ public sealed class BusinessDetailsViewModel : INotifyPropertyChanged, INotifyDa
     private void Load()
     {
         using var db = _openDatabase();
-        var business = db.Businesses.SingleOrDefault();
+        var business = db.Businesses.Include(b => b.AdditionalRegistrations).SingleOrDefault();
 
         _legalName = business?.LegalName ?? "";
         _tradeName = business?.TradeName ?? "";
@@ -309,6 +337,13 @@ public sealed class BusinessDetailsViewModel : INotifyPropertyChanged, INotifyDa
         _gstin = business?.Gstin ?? "";
         _pan = business?.Pan ?? "";
 
+        AdditionalRegistrations.Clear();
+        var registrations = business?.AdditionalRegistrations ?? [];
+        foreach (var registration in registrations.OrderBy(r => r.Position))
+        {
+            AddAdditionalRegistration(registration.Label, registration.Number);
+        }
+
         var fieldsWithErrors = _errors.Keys.ToList();
         _errors.Clear();
         foreach (var field in fieldsWithErrors)
@@ -318,6 +353,13 @@ public sealed class BusinessDetailsViewModel : INotifyPropertyChanged, INotifyDa
 
         // An empty name means every property changed.
         OnPropertyChanged("");
+    }
+
+    private void AddAdditionalRegistration(string label, string number)
+    {
+        var row = new AdditionalRegistrationViewModel(AdditionalRegistrations) { Label = label, Number = number };
+        row.ErrorsChanged += (_, _) => OnPropertyChanged(nameof(HasErrors));
+        AdditionalRegistrations.Add(row);
     }
 
     /// <summary>Fills in State and PAN from a valid GSTIN, locking them; unlocks them otherwise.</summary>
