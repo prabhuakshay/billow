@@ -266,6 +266,37 @@
                            Style="{StaticResource FieldLabel}" />
                     <TextBox x:Name="BankBranchBox"
                              Text="{Binding BankBranch, UpdateSourceTrigger=PropertyChanged}" />
+
+                    <TextBlock Text="Printing" Style="{StaticResource SectionHeading}" />
+
+                    <Label Content="Logo" Style="{StaticResource FieldLabel}" />
+                    <!-- The PNG bytes convert to a picture on their own. Nothing shows while there is no logo. -->
+                    <Border HorizontalAlignment="Left" Padding="4" BorderThickness="1"
+                            BorderBrush="{DynamicResource {x:Static SystemColors.ControlDarkBrushKey}}"
+                            Visibility="{Binding HasLogo, Converter={StaticResource BooleanToVisibility}}">
+                        <Image Source="{Binding Logo}" MaxWidth="200" MaxHeight="100" Stretch="Uniform"
+                               AutomationProperties.Name="Logo preview" />
+                    </Border>
+                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                        <Button Content="Choose Logo…" Padding="10,2"
+                                Command="{Binding ChooseLogoCommand}" />
+                        <Button Content="Remo_ve Logo" Padding="10,2" Margin="6,0,0,0"
+                                Command="{Binding RemoveLogoCommand}"
+                                Visibility="{Binding HasLogo, Converter={StaticResource BooleanToVisibility}}" />
+                    </StackPanel>
+                    <TextBlock Style="{StaticResource FieldError}" Text="{Binding LogoError}" />
+
+                    <Label Content="Authorised Signator_y" Target="{Binding ElementName=AuthorisedSignatoryBox}"
+                           Style="{StaticResource FieldLabel}" />
+                    <TextBox x:Name="AuthorisedSignatoryBox"
+                             Text="{Binding AuthorisedSignatory, UpdateSourceTrigger=PropertyChanged}" />
+
+                    <Label Content="_Footer Text" Target="{Binding ElementName=FooterTextBox}"
+                           Style="{StaticResource FieldLabel}" />
+                    <!-- AcceptsReturn: Enter starts a new line here instead of pressing Save. -->
+                    <TextBox x:Name="FooterTextBox" AcceptsReturn="True" TextWrapping="Wrap"
+                             MinLines="3" VerticalScrollBarVisibility="Auto"
+                             Text="{Binding FooterText, UpdateSourceTrigger=PropertyChanged}" />
                 </StackPanel>
             </ScrollViewer>
         </Border>

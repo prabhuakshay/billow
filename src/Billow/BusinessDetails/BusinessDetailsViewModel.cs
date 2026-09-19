@@ -50,8 +50,12 @@ public sealed partial class BusinessDetailsViewModel : INotifyPropertyChanged, I
         "Changing the Registration Type or GSTIN applies to new Bills only. Bills already issued "
         + "keep the details they were printed with.\n\nSave the change?";
 
+    private const string UnreadableLogo =
+        "Billow can't read that file as a picture. Choose a PNG, JPEG, BMP, GIF or TIFF image.";
+
     private readonly Func<BillowDbContext> _openDatabase;
     private readonly IConfirmationPrompt _confirmationPrompt;
+    private readonly ILogoFilePicker _logoFilePicker;
     private readonly Dictionary<string, string> _errors = [];
 
     private string _legalName = "";
@@ -72,6 +76,10 @@ public sealed partial class BusinessDetailsViewModel : INotifyPropertyChanged, I
     private string _ifsc = "";
     private string _bankName = "";
     private string _bankBranch = "";
+    private byte[]? _logo;
+    private string? _logoError;
+    private string _authorisedSignatory = "";
+    private string _footerText = "";
 
     public BusinessDetailsViewModel(
         Func<BillowDbContext> openDatabase,
@@ -80,6 +88,7 @@ public sealed partial class BusinessDetailsViewModel : INotifyPropertyChanged, I
     {
         _openDatabase = openDatabase;
         _confirmationPrompt = confirmationPrompt;
+        _logoFilePicker = logoFilePicker;
         SaveCommand = new RelayCommand(() =>
         {
             if (Save())
@@ -89,6 +98,8 @@ public sealed partial class BusinessDetailsViewModel : INotifyPropertyChanged, I
         });
         CancelCommand = new RelayCommand(Cancel);
         AddAdditionalRegistrationCommand = new RelayCommand(() => AddAdditionalRegistration("", ""));
+        ChooseLogoCommand = new RelayCommand(ChooseLogo);
+        RemoveLogoCommand = new RelayCommand(() => SetLogo(null, null));
         AdditionalRegistrations.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasErrors));
         Load();
     }
@@ -119,6 +130,12 @@ public sealed partial class BusinessDetailsViewModel : INotifyPropertyChanged, I
 
     /// <summary>Adds an empty Additional Registration row at the end.</summary>
     public ICommand AddAdditionalRegistrationCommand { get; }
+
+    /// <summary>Asks for a picture file and makes it the logo, or shows why it can't be.</summary>
+    public ICommand ChooseLogoCommand { get; }
+
+    /// <summary>Clears the logo, so Bills print without one.</summary>
+    public ICommand RemoveLogoCommand { get; }
 
     /// <summary>Labels offered for an Additional Registration. Any other label may be typed.</summary>
     public IReadOnlyList<string> SuggestedAdditionalRegistrationLabels { get; } =
@@ -277,6 +294,30 @@ public sealed partial class BusinessDetailsViewModel : INotifyPropertyChanged, I
         set => SetAndCheck(ref _bankBranch, value);
     }
 
+    /// <summary>The logo as it will be stored, a PNG, or null if there is none. The preview shows it.</summary>
+    public byte[]? Logo => _logo;
+
+    public bool HasLogo => _logo is not null;
+
+    /// <summary>
+    /// Why the last picked file couldn't become the logo, or null. It doesn't block Save: the logo
+    /// that was there before is kept.
+    /// </summary>
+    public string? LogoError => _logoError;
+
+    public string AuthorisedSignatory
+    {
+        get => _authorisedSignatory;
+        set => SetAndCheck(ref _authorisedSignatory, value);
+    }
+
+    /// <summary>May span several lines.</summary>
+    public string FooterText
+    {
+        get => _footerText;
+        set => SetAndCheck(ref _footerText, value);
+    }
+
     /// <summary>The GSTIN, if it applies and is valid; otherwise null.</summary>
     private Gst.Gstin? ValidGstin => IsGstinApplicable ? Gst.Gstin.Check(Gstin).Value : null;
 
@@ -342,6 +383,9 @@ public sealed partial class BusinessDetailsViewModel : INotifyPropertyChanged, I
         business.Ifsc = IsBlank(Ifsc) ? null : NormaliseIfsc(Ifsc);
         business.BankName = NullIfBlank(BankName);
         business.BankBranch = NullIfBlank(BankBranch);
+        business.Logo = Logo;
+        business.AuthorisedSignatory = NullIfBlank(AuthorisedSignatory);
+        business.FooterText = NullIfBlank(FooterText);
         business.AdditionalRegistrations.Clear();
         business.AdditionalRegistrations.AddRange(AdditionalRegistrations
             .Where(row => !row.IsEmpty)
@@ -413,6 +457,10 @@ public sealed partial class BusinessDetailsViewModel : INotifyPropertyChanged, I
         _ifsc = business?.Ifsc ?? "";
         _bankName = business?.BankName ?? "";
         _bankBranch = business?.BankBranch ?? "";
+        _logo = business?.Logo;
+        _logoError = null;
+        _authorisedSignatory = business?.AuthorisedSignatory ?? "";
+        _footerText = business?.FooterText ?? "";
 
         AdditionalRegistrations.Clear();
         var registrations = business?.AdditionalRegistrations ?? [];
@@ -437,6 +485,32 @@ public sealed partial class BusinessDetailsViewModel : INotifyPropertyChanged, I
         var row = new AdditionalRegistrationViewModel(AdditionalRegistrations) { Label = label, Number = number };
         row.ErrorsChanged += (_, _) => OnPropertyChanged(nameof(HasErrors));
         AdditionalRegistrations.Add(row);
+    }
+
+    private void ChooseLogo()
+    {
+        if (_logoFilePicker.PickLogoFile() is not { } path)
+        {
+            return;
+        }
+
+        if (LogoImage.FromFile(path) is { } logo)
+        {
+            SetLogo(logo, null);
+        }
+        else
+        {
+            SetLogo(_logo, UnreadableLogo);
+        }
+    }
+
+    private void SetLogo(byte[]? logo, string? error)
+    {
+        _logo = logo;
+        _logoError = error;
+        OnPropertyChanged(nameof(Logo));
+        OnPropertyChanged(nameof(HasLogo));
+        OnPropertyChanged(nameof(LogoError));
     }
 
     /// <summary>Fills in State and PAN from a valid GSTIN, locking them; unlocks them otherwise.</summary>

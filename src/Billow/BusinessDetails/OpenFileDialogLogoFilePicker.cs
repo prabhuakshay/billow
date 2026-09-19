@@ -11,7 +11,9 @@ public sealed class OpenFileDialogLogoFilePicker(Window owner) : ILogoFilePicker
         var dialog = new OpenFileDialog
         {
             Title = "Choose a logo",
-            Filter = "Images|*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.tif;*.tiff|All files|*.*",
+            // Picture formats LogoImage can decode. It can also read icons, but their first
+            // frame is often the smallest, so they aren't offered.
+            Filter = "Pictures|*.png;*.jpg;*.jpeg;*.jfif;*.bmp;*.gif;*.tif;*.tiff|All files|*.*",
         };
 
         return dialog.ShowDialog(owner) == true ? dialog.FileName : null;
