@@ -1,4 +1,4 @@
-namespace Billow.BusinessDetails;
+namespace Billow;
 
 /// <summary>Asks the user a yes/no question, so the view model never opens a dialog itself.</summary>
 public interface IConfirmationPrompt

@@ -1,6 +1,6 @@
 using System.Windows;
 
-namespace Billow.BusinessDetails;
+namespace Billow;
 
 /// <summary>Asks with a Yes/No message box over <paramref name="owner"/>.</summary>
 public sealed class MessageBoxConfirmationPrompt(Window owner) : IConfirmationPrompt

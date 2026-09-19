@@ -37,36 +37,6 @@
                 </Trigger>
             </Style.Triggers>
         </Style>
-
-        <!-- The error under a field. Takes no space while the field has no error. -->
-        <Style x:Key="FieldError" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="#C42B1C" />
-            <Setter Property="Margin" Value="0,2,0,0" />
-            <Setter Property="TextWrapping" Value="Wrap" />
-            <Style.Triggers>
-                <Trigger Property="Text" Value="">
-                    <Setter Property="Visibility" Value="Collapsed" />
-                </Trigger>
-            </Style.Triggers>
-        </Style>
-
-        <!-- A field with its error under it. The field is the Content. -->
-        <Style x:Key="WithError" TargetType="ContentControl">
-            <Setter Property="Focusable" Value="False" />
-            <Setter Property="IsTabStop" Value="False" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="ContentControl">
-                        <StackPanel>
-                            <ContentPresenter />
-                            <TextBlock Style="{StaticResource FieldError}"
-                                       Text="{Binding Content.(Validation.Errors)/ErrorContent,
-                                                      RelativeSource={RelativeSource TemplatedParent}}" />
-                        </StackPanel>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
     </Window.Resources>
 
     <DockPanel>
