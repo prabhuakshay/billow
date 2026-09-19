@@ -18,14 +18,31 @@ public sealed class CustomersViewModelTests : IDisposable
         string name,
         string city = "",
         string? stateCode = null,
-        string phone = "")
+        string phone = "",
+        string tradeName = "")
     {
         _formOpener.UseForm = form =>
         {
             form.Name = name;
+            form.TradeName = tradeName;
             form.City = city;
             form.State = stateCode is null ? null : GstState.Find(stateCode);
             form.Phone = phone;
+            form.SaveCommand.Execute(null);
+        };
+        list.AddCommand.Execute(null);
+    }
+
+    /// <summary>Adds a B2B Customer in Karnataka through the list's Add.</summary>
+    private void AddB2BCustomer(CustomersViewModel list, string name, string gstin)
+    {
+        _formOpener.UseForm = form =>
+        {
+            form.Name = name;
+            form.Gstin = gstin;
+            form.AddressLine1 = "7 MG Road";
+            form.City = "Bengaluru";
+            form.Pin = "560001";
             form.SaveCommand.Execute(null);
         };
         list.AddCommand.Execute(null);
@@ -191,5 +208,116 @@ public sealed class CustomersViewModelTests : IDisposable
         list.EditCommand.Execute(null);
 
         Assert.Empty(_formOpener.Opened);
+    }
+
+    [Fact]
+    public void SearchingByPartOfANameFindsTheCustomerIgnoringCase()
+    {
+        var list = OpenList();
+        AddCustomer(list, "Anita Desai");
+        AddCustomer(list, "Ramesh Patil");
+
+        list.SearchText = "PAT";
+
+        Assert.Equal(["Ramesh Patil"], NamesIn(list));
+    }
+
+    [Fact]
+    public void SearchingByPartOfATradeNameFindsTheCustomer()
+    {
+        var list = OpenList();
+        AddCustomer(list, "Anita Desai", tradeName: "Desai Sweets");
+        AddCustomer(list, "Ramesh Patil", tradeName: "Patil Hardware");
+
+        list.SearchText = "hardware";
+
+        Assert.Equal(["Ramesh Patil"], NamesIn(list));
+    }
+
+    [Fact]
+    public void SearchingByPartOfAPhoneNumberFindsTheCustomer()
+    {
+        var list = OpenList();
+        AddCustomer(list, "Anita Desai", phone: "91234 56789");
+        AddCustomer(list, "Ramesh Patil", phone: "98765 43210");
+
+        list.SearchText = "43210";
+
+        Assert.Equal(["Ramesh Patil"], NamesIn(list));
+    }
+
+    [Fact]
+    public void SearchingByPartOfAGstinInAnyCaseFindsTheCustomer()
+    {
+        var list = OpenList();
+        AddCustomer(list, "Anita Desai");
+        AddB2BCustomer(list, "Umesh Traders", "29AAACB2894G1ZJ");
+
+        list.SearchText = "aaacb2894g";
+
+        Assert.Equal(["Umesh Traders"], NamesIn(list));
+    }
+
+    [Fact]
+    public void ClearingTheSearchBringsBackTheFullListSortedByName()
+    {
+        var list = OpenList();
+        AddCustomer(list, "suresh Kumar");
+        AddCustomer(list, "Anita Desai");
+        AddCustomer(list, "Ramesh Patil");
+        list.SearchText = "ramesh";
+
+        list.SearchText = "";
+
+        Assert.Equal(["Anita Desai", "Ramesh Patil", "suresh Kumar"], NamesIn(list));
+    }
+
+    [Fact]
+    public void ASearchMatchingNoCustomerEmptiesTheList()
+    {
+        var list = OpenList();
+        AddCustomer(list, "Ramesh Patil");
+
+        list.SearchText = "zzz";
+
+        Assert.Empty(list.Customers);
+        Assert.Null(list.SelectedCustomer);
+    }
+
+    [Fact]
+    public void TheSearchStillAppliesAfterACustomerIsAdded()
+    {
+        var list = OpenList();
+        AddCustomer(list, "Ramesh Patil");
+        list.SearchText = "patil";
+
+        AddCustomer(list, "Anita Desai");
+
+        Assert.Equal(["Ramesh Patil"], NamesIn(list));
+    }
+
+    [Fact]
+    public void SpacesAroundTheSearchTextAreIgnored()
+    {
+        var list = OpenList();
+        AddCustomer(list, "Anita Desai");
+        AddCustomer(list, "Ramesh Patil");
+
+        list.SearchText = "  patil ";
+
+        Assert.Equal(["Ramesh Patil"], NamesIn(list));
+    }
+
+    [Fact]
+    public void TheSelectedCustomerStaysSelectedWhileItMatchesTheSearch()
+    {
+        var list = OpenList();
+        AddCustomer(list, "Anita Desai");
+        AddCustomer(list, "Ramesh Patil");
+        list.SelectedCustomer = list.Customers[1];
+
+        list.SearchText = "pat";
+
+        Assert.Equal("Ramesh Patil", list.SelectedCustomer?.Name);
     }
 }
