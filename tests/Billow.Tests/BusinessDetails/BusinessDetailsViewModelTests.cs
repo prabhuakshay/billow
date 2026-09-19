@@ -7,11 +7,17 @@ public sealed class BusinessDetailsViewModelTests : IDisposable
 {
     private readonly TestDatabase _database = new();
     private readonly FakeConfirmationPrompt _confirmationPrompt = new();
+    private readonly FakeLogoFilePicker _logoFilePicker = new();
+    private readonly TestImages _images = new();
 
-    public void Dispose() => _database.Dispose();
+    public void Dispose()
+    {
+        _database.Dispose();
+        _images.Dispose();
+    }
 
     private BusinessDetailsViewModel OpenScreen() =>
-        new(_database.Open, _confirmationPrompt, new FakeLogoFilePicker());
+        new(_database.Open, _confirmationPrompt, _logoFilePicker);
 
     private BusinessDetailsViewModel OpenScreenWithValidDetails()
     {
@@ -864,15 +870,244 @@ public sealed class BusinessDetailsViewModelTests : IDisposable
         Assert.False(screen.HasErrors);
     }
 
+    [Theory]
+    [InlineData(1200, 600, 400, 200)]
+    [InlineData(300, 900, 133, 400)]
+    [InlineData(2000, 2000, 400, 400)]
+    public void ALargeLogoIsShrunkSoItsLongestSideIs400Pixels(int width, int height, int storedWidth, int storedHeight)
+    {
+        var screen = OpenScreenWithValidDetails();
+
+        ChooseLogo(screen, _images.Jpeg(width, height));
+
+        Assert.Equal((storedWidth, storedHeight), TestImages.SizeOf(screen.Logo!));
+    }
+
+    [Theory]
+    [InlineData(120, 80)]
+    [InlineData(400, 250)]
+    public void ASmallLogoIsNotEnlarged(int width, int height)
+    {
+        var screen = OpenScreenWithValidDetails();
+
+        ChooseLogo(screen, _images.Jpeg(width, height));
+
+        Assert.Equal((width, height), TestImages.SizeOf(screen.Logo!));
+    }
+
+    [Theory]
+    [InlineData(120, 80)]
+    [InlineData(1200, 800)]
+    public void ALogoIsStoredAt96DotsPerInchSoItsPixelsAreItsSize(int width, int height)
+    {
+        var screen = OpenScreenWithValidDetails();
+
+        ChooseLogo(screen, _images.Png(width, height, dpi: 300));
+
+        Assert.Equal((96, 96), TestImages.DpiOf(screen.Logo!));
+    }
+
+    [Fact]
+    public void AChosenLogoIsStoredAsPng()
+    {
+        var screen = OpenScreenWithValidDetails();
+
+        ChooseLogo(screen, _images.Jpeg(64, 32));
+
+        Assert.True(TestImages.IsPng(screen.Logo!));
+        Assert.True(screen.HasLogo);
+    }
+
+    [Fact]
+    public void ASavedLogoIsShownWhenTheScreenIsReopened()
+    {
+        var screen = OpenScreenWithValidDetails();
+        ChooseLogo(screen, _images.Png(900, 300));
+        var logo = screen.Logo;
+
+        Assert.True(screen.Save());
+
+        var reopened = OpenScreen();
+        Assert.Equal(logo, reopened.Logo);
+        Assert.Equal((400, 133), TestImages.SizeOf(reopened.Logo!));
+        Assert.True(reopened.HasLogo);
+    }
+
+    [Fact]
+    public void AnotherLogoReplacesTheCurrentOne()
+    {
+        var screen = OpenScreenWithValidDetails();
+        ChooseLogo(screen, _images.Png(100, 50));
+        Assert.True(screen.Save());
+        screen = OpenScreen();
+
+        ChooseLogo(screen, _images.Png(30, 60));
+        Assert.True(screen.Save());
+
+        Assert.Equal((30, 60), TestImages.SizeOf(OpenScreen().Logo!));
+    }
+
+    [Fact]
+    public void RemovingTheLogoClearsItAndItStaysRemovedOnceSaved()
+    {
+        var screen = OpenScreenWithValidDetails();
+        ChooseLogo(screen, _images.Png(100, 50));
+        Assert.True(screen.Save());
+        screen = OpenScreen();
+
+        screen.RemoveLogoCommand.Execute(null);
+
+        Assert.Null(screen.Logo);
+        Assert.False(screen.HasLogo);
+        Assert.True(screen.Save());
+        Assert.Null(OpenScreen().Logo);
+    }
+
+    [Fact]
+    public void ALogoIsOptional()
+    {
+        var screen = OpenScreenWithValidDetails();
+
+        Assert.True(screen.Save());
+
+        var reopened = OpenScreen();
+        Assert.Null(reopened.Logo);
+        Assert.False(reopened.HasLogo);
+    }
+
+    [Fact]
+    public void CancellingThePickKeepsTheCurrentLogo()
+    {
+        var screen = OpenScreenWithValidDetails();
+        ChooseLogo(screen, _images.Png(100, 50));
+        var logo = screen.Logo;
+
+        _logoFilePicker.FilePath = null;
+        screen.ChooseLogoCommand.Execute(null);
+
+        Assert.Same(logo, screen.Logo);
+        Assert.Null(screen.LogoError);
+    }
+
+    [Fact]
+    public void AnUnreadableFileShowsAnErrorAndKeepsTheCurrentLogo()
+    {
+        var screen = OpenScreenWithValidDetails();
+        ChooseLogo(screen, _images.Png(100, 50));
+        var logo = screen.Logo;
+
+        ChooseLogo(screen, _images.NotAnImage());
+
+        Assert.Equal(UnreadableLogo, screen.LogoError);
+        Assert.Same(logo, screen.Logo);
+    }
+
+    [Fact]
+    public void AFileThatIsGoneShowsAnError()
+    {
+        var screen = OpenScreenWithValidDetails();
+
+        ChooseLogo(screen, Path.Combine(Path.GetTempPath(), $"billow-missing-{Guid.NewGuid():N}.png"));
+
+        Assert.Equal(UnreadableLogo, screen.LogoError);
+        Assert.Null(screen.Logo);
+    }
+
+    [Fact]
+    public void AnUnreadableFileDoesNotBlockSave()
+    {
+        var screen = OpenScreenWithValidDetails();
+
+        ChooseLogo(screen, _images.NotAnImage());
+
+        Assert.False(screen.HasErrors);
+        Assert.True(screen.Save());
+    }
+
+    [Fact]
+    public void TheLogoErrorClearsOnceAReadableFileIsChosenOrTheLogoIsRemoved()
+    {
+        var screen = OpenScreenWithValidDetails();
+        ChooseLogo(screen, _images.NotAnImage());
+
+        ChooseLogo(screen, _images.Png(10, 10));
+        Assert.Null(screen.LogoError);
+
+        ChooseLogo(screen, _images.NotAnImage());
+        screen.RemoveLogoCommand.Execute(null);
+        Assert.Null(screen.LogoError);
+    }
+
+    [Fact]
+    public void SavedAuthorisedSignatoryAndFooterTextAreShownWhenTheScreenIsReopened()
+    {
+        var screen = OpenScreenWithValidDetails();
+        screen.AuthorisedSignatory = "  For Sharma General Stores  ";
+        screen.FooterText = "Goods once sold will not be taken back.\r\nधन्यवाद! पुन्हा भेट द्या.\r\n";
+
+        Assert.True(screen.Save());
+
+        var reopened = OpenScreen();
+        Assert.Equal("For Sharma General Stores", reopened.AuthorisedSignatory);
+        Assert.Equal("Goods once sold will not be taken back.\r\nधन्यवाद! पुन्हा भेट द्या.", reopened.FooterText);
+    }
+
+    [Fact]
+    public void AuthorisedSignatoryAndFooterTextAreOptional()
+    {
+        var screen = OpenScreenWithValidDetails();
+        screen.AuthorisedSignatory = "   ";
+        screen.FooterText = "\r\n  ";
+
+        Assert.True(screen.Save());
+
+        var reopened = OpenScreen();
+        Assert.Equal("", reopened.AuthorisedSignatory);
+        Assert.Equal("", reopened.FooterText);
+    }
+
+    [Fact]
+    public void CancelPutsBackTheSavedPrintingDetails()
+    {
+        var screen = OpenScreenWithValidDetails();
+        ChooseLogo(screen, _images.Png(100, 50));
+        screen.AuthorisedSignatory = "For Sharma General Stores";
+        screen.FooterText = "Thank you!";
+        Assert.True(screen.Save());
+        var logo = screen.Logo;
+        screen = OpenScreen();
+        screen.RemoveLogoCommand.Execute(null);
+        ChooseLogo(screen, _images.NotAnImage());
+        screen.AuthorisedSignatory = "Proprietor";
+        screen.FooterText = "Visit again";
+
+        screen.CancelCommand.Execute(null);
+
+        Assert.Equal(logo, screen.Logo);
+        Assert.Null(screen.LogoError);
+        Assert.Equal("For Sharma General Stores", screen.AuthorisedSignatory);
+        Assert.Equal("Thank you!", screen.FooterText);
+    }
+
     private const string ChangeAppliesToNewBillsOnly =
         "Changing the Registration Type or GSTIN applies to new Bills only. Bills already issued "
         + "keep the details they were printed with.\n\nSave the change?";
+
+    private const string UnreadableLogo =
+        "Billow can't read that file as a picture. Choose a PNG, JPEG, BMP, GIF or TIFF image.";
 
     private static void AddAdditionalRegistration(BusinessDetailsViewModel screen, string label, string number)
     {
         screen.AddAdditionalRegistrationCommand.Execute(null);
         screen.AdditionalRegistrations[^1].Label = label;
         screen.AdditionalRegistrations[^1].Number = number;
+    }
+
+    /// <summary>Picks <paramref name="path"/> through the fake logo file picker.</summary>
+    private void ChooseLogo(BusinessDetailsViewModel screen, string path)
+    {
+        _logoFilePicker.FilePath = path;
+        screen.ChooseLogoCommand.Execute(null);
     }
 
     private static string[] LabelsOf(BusinessDetailsViewModel screen) =>

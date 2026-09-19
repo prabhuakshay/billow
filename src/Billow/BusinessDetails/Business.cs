@@ -44,6 +44,15 @@ public class Business
 
     public string? BankBranch { get; set; }
 
+    /// <summary>The logo printed on Bills: a PNG at most <see cref="LogoImage.MaxSide"/> pixels on its longest side.</summary>
+    public byte[]? Logo { get; set; }
+
+    /// <summary>The line printed under the signature space, such as "For Sharma General Stores".</summary>
+    public string? AuthorisedSignatory { get; set; }
+
+    /// <summary>Text printed at the foot of Bills. It may span several lines.</summary>
+    public string? FooterText { get; set; }
+
     /// <summary>The Additional Registrations printed on Bills. Not sorted: order them by <see cref="AdditionalRegistration.Position"/>.</summary>
     public List<AdditionalRegistration> AdditionalRegistrations { get; } = [];
 }
