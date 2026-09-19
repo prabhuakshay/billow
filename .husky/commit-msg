@@ -1,0 +1,23 @@
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+# Enforce Conventional Commits (https://www.conventionalcommits.org):
+#   <type>[optional scope][!]: <description>
+# e.g. "feat(invoices): add PDF export" or "fix!: correct tax rounding"
+first_line=$(head -n1 "$1")
+
+# Let git's own generated messages through.
+case "$first_line" in
+  "Merge "* | "Revert \""* | "fixup! "* | "squash! "* | "amend! "*) exit 0 ;;
+esac
+
+types="feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert"
+if ! echo "$first_line" | grep -Eq "^($types)(\([a-z0-9._-]+\))?!?: [^ ].*$"; then
+  echo "Commit message does not follow Conventional Commits:" >&2
+  echo "  $first_line" >&2
+  echo "" >&2
+  echo "Expected: <type>(optional scope): <description>" >&2
+  echo "Types: $(echo $types | tr '|' ' ')" >&2
+  echo "Example: feat(invoices): add PDF export" >&2
+  exit 1
+fi
