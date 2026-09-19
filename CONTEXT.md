@@ -11,7 +11,7 @@ The one business that this Billow install bills for. GST law calls it the "suppl
 _Avoid_: Store, shop, company, seller, supplier ("supplier" is kept for whoever the Business buys stock from)
 
 **Legal Name**:
-The Business's name as it appears on its PAN and GST registration.
+A party's name as it appears on its PAN and GST registration. Both the Business and a B2B Customer have one.
 _Avoid_: Registered name, company name
 
 **Trade Name**:
@@ -34,6 +34,34 @@ A Registration Type for a business without a GSTIN. It cannot charge GST.
 **Additional Registration**:
 A licence or registration number, other than the GSTIN, that the Business must or chooses to print on its documents. Examples are an FSSAI licence, a Drug Licence or a Udyam number. Each has a label and a number.
 _Avoid_: Licence, extra ID
+
+### Selling
+
+**Customer**:
+A party the Business sells to and keeps on record so it can bill them again. A sale does not need a Customer: a walk-in buyer who gives no details gets a Bill with no Customer on it.
+_Avoid_: Party, buyer, client, recipient, debtor
+
+**B2B Customer**:
+A Customer with a GSTIN. Its Legal Name, address, State and PIN are all required, and its State is always the one its GSTIN belongs to. A Customer on the composition scheme is still a B2B Customer.
+_Avoid_: Registered party, dealer
+
+**B2C Customer**:
+A Customer without a GSTIN. Only a name is required.
+_Avoid_: Retail customer, consumer
+
+**Walk-in Sale**:
+A sale billed with no Customer, to a buyer whose details are not recorded.
+_Avoid_: Cash sale, counter sale
+
+**Bill To**:
+The Customer details printed on a Bill as the party being billed.
+
+**Ship To**:
+The address the goods are delivered to, printed on a Bill when it differs from the Bill To address. It belongs to the Bill, not the Customer, and applies to B2B and B2C sales alike.
+_Avoid_: Delivery address, consignee
+
+**Place of Supply**:
+The State where a sale is treated as taking place: for goods, where delivery ends. Comparing it with the Business's State decides whether a Regular Business charges IGST or CGST and SGST, and a Composition Business may only sell within its own State.
 
 ### Documents
 
