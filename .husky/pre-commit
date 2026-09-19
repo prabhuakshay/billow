@@ -1,0 +1,12 @@
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+# main only changes through pull requests, same as on GitHub.
+branch=$(git symbolic-ref --short -q HEAD)
+if [ "$branch" = "main" ]; then
+  echo "Committing directly to main is not allowed. Create a branch: git switch -c <name>" >&2
+  exit 1
+fi
+
+# Formatting and build checks are defined in .husky/task-runner.json.
+dotnet husky run --group pre-commit

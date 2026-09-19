@@ -23,6 +23,14 @@ Simple billing software for Windows, with optional inventory management.
 dotnet run --project src/Billow
 ```
 
+## Contributing
+
+Git hooks are installed automatically the first time you build or restore (they live in `.husky/`). They:
+
+- **Block commits on `main`.** Work on a branch and merge through a pull request.
+- **Require [Conventional Commits](https://www.conventionalcommits.org) messages**, e.g. `feat(invoices): add PDF export` or `fix: correct tax rounding`. Types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`.
+- **Check formatting and build the app** before each commit. The build runs the .NET code analyzers and the style rules in `.editorconfig`, with warnings treated as errors. Run `dotnet format` to fix formatting and most style issues automatically.
+
 ## Installing
 
 Download `Billow-win-Setup.exe` from the [latest release](https://github.com/prabhuakshay/billow/releases/latest) and run it. No administrator rights or separate .NET install needed — it adds Start menu and desktop shortcuts.
@@ -62,6 +70,9 @@ Tags with a suffix, such as `v0.2.0-beta.1`, are published as pre-releases.
 ```
 Billow.sln                  Solution file — open this in Visual Studio
 global.json                 Pins the .NET SDK version
+.editorconfig               Formatting, code style and analyzer rules
+Directory.Build.props       Code quality settings for all projects
+.husky/                     Git hooks
 build-installer.ps1         Builds the installer
 .github/workflows/          Release automation
 src/Billow/                 The desktop app (WPF, .NET 10)
