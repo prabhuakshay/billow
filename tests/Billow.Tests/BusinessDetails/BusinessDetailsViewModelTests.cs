@@ -276,6 +276,31 @@ public sealed class BusinessDetailsViewModelTests : IDisposable
         Assert.Equal("Sharma General Stores", OpenScreen().LegalName);
     }
 
+    [Fact]
+    public void NoBusinessHasBeenSavedOnAFreshDatabase()
+    {
+        Assert.False(BusinessDetailsViewModel.HasSavedBusiness(_database.Open));
+    }
+
+    [Fact]
+    public void ABusinessHasBeenSavedOnceTheScreenSaves()
+    {
+        OpenScreenWithValidDetails().SaveCommand.Execute(null);
+
+        Assert.True(BusinessDetailsViewModel.HasSavedBusiness(_database.Open));
+    }
+
+    [Fact]
+    public void NoBusinessHasBeenSavedAfterTheScreenIsCancelledOrFailsToSave()
+    {
+        var screen = OpenScreenWithValidDetails();
+        screen.LegalName = "";
+        screen.SaveCommand.Execute(null);
+        screen.CancelCommand.Execute(null);
+
+        Assert.False(BusinessDetailsViewModel.HasSavedBusiness(_database.Open));
+    }
+
     private static void SetText(BusinessDetailsViewModel screen, string field, string value)
     {
         switch (field)
