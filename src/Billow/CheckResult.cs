@@ -1,4 +1,4 @@
-namespace Billow.Gst;
+namespace Billow;
 
 /// <summary>
 /// The outcome of checking a typed-in identifier: either the valid, normalised value or the

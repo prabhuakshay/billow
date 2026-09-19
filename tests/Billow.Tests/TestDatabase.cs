@@ -2,7 +2,7 @@ using Billow.Data;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 
-namespace Billow.Tests.BusinessDetails;
+namespace Billow.Tests;
 
 /// <summary>
 /// A real Billow database in a temporary SQLite file, with every migration applied. Deleted on

@@ -27,12 +27,7 @@ public sealed partial class BusinessDetailsViewModel : INotifyPropertyChanged, I
         [nameof(AddressLine1)] = screen => IsBlank(screen.AddressLine1) ? "Enter the first line of the address." : null,
         [nameof(City)] = screen => IsBlank(screen.City) ? "Enter the city." : null,
         [nameof(State)] = screen => screen.State is null ? "Choose the State." : null,
-        [nameof(Pin)] = screen => screen.Pin.Trim() switch
-        {
-            "" => "Enter the 6-digit PIN.",
-            { Length: 6 } pin when pin.All(char.IsAsciiDigit) => null,
-            _ => "A PIN is exactly 6 digits.",
-        },
+        [nameof(Pin)] = screen => Billow.Pin.Check(screen.Pin).Error,
         [nameof(RegistrationType)] = screen =>
             screen.RegistrationType is null ? "Choose the Registration Type." : null,
         [nameof(Gstin)] = screen => !screen.IsGstinApplicable ? null
@@ -371,7 +366,7 @@ public sealed partial class BusinessDetailsViewModel : INotifyPropertyChanged, I
         business.AddressLine2 = NullIfBlank(AddressLine2);
         business.City = City.Trim();
         business.StateCode = State!.Code;
-        business.Pin = Pin.Trim();
+        business.Pin = Billow.Pin.Check(Pin).Value!.Value;
         business.RegistrationType = RegistrationType!.Value;
         business.Gstin = gstin;
         business.Pan = IsBlank(Pan) ? null : Gst.Pan.Check(Pan).Value!.Value;
