@@ -7,10 +7,11 @@ public sealed class CustomersViewModelTests : IDisposable
 {
     private readonly TestDatabase _database = new();
     private readonly FakeCustomerFormOpener _formOpener = new();
+    private readonly FakeConfirmationPrompt _confirmationPrompt = new();
 
     public void Dispose() => _database.Dispose();
 
-    private CustomersViewModel OpenList() => new(_database.Open, _formOpener);
+    private CustomersViewModel OpenList() => new(_database.Open, _formOpener, _confirmationPrompt);
 
     /// <summary>Adds a Customer through the list's Add, as the user would.</summary>
     private void AddCustomer(
@@ -371,5 +372,203 @@ public sealed class CustomersViewModelTests : IDisposable
         list.SearchText = search;
 
         Assert.Equal(["Ramesh Patil"], NamesIn(list));
+    }
+
+    private Customer? FindInDatabase(string name)
+    {
+        using var db = _database.Open();
+        return db.Customers.SingleOrDefault(c => c.Name == name);
+    }
+
+    [Fact]
+    public void ADeactivatedCustomerLeavesTheListButStaysInTheDatabase()
+    {
+        var list = OpenList();
+        AddCustomer(list, "Anita Desai");
+        AddCustomer(list, "Ramesh Patil");
+        list.SelectedCustomer = list.Customers[1];
+
+        list.DeactivateCommand.Execute(null);
+
+        Assert.Equal(["Anita Desai"], NamesIn(list));
+        Assert.Null(list.SelectedCustomer);
+        Assert.Equal(["Anita Desai"], NamesIn(OpenList()));
+        Assert.False(FindInDatabase("Ramesh Patil")?.IsActive);
+    }
+
+    [Fact]
+    public void DeactivateDoesNothingWhenNoCustomerIsSelected()
+    {
+        var list = OpenList();
+        AddCustomer(list, "Ramesh Patil");
+        list.SelectedCustomer = null;
+
+        list.DeactivateCommand.Execute(null);
+
+        Assert.Equal(["Ramesh Patil"], NamesIn(OpenList()));
+    }
+
+    [Fact]
+    public void ShowInactiveIncludesInactiveCustomersSortedAmongTheActiveOnes()
+    {
+        var list = OpenList();
+        AddCustomer(list, "Anita Desai");
+        AddCustomer(list, "Ramesh Patil");
+        AddCustomer(list, "Suresh Kumar");
+        list.SelectedCustomer = list.Customers[1];
+        list.DeactivateCommand.Execute(null);
+
+        list.ShowInactive = true;
+
+        Assert.Equal(["Anita Desai", "Ramesh Patil", "Suresh Kumar"], NamesIn(list));
+        Assert.Equal([true, false, true], list.Customers.Select(c => c.IsActive));
+    }
+
+    [Fact]
+    public void TurningShowInactiveOffHidesInactiveCustomersAgain()
+    {
+        var list = OpenList();
+        AddCustomer(list, "Anita Desai");
+        AddCustomer(list, "Ramesh Patil");
+        list.SelectedCustomer = list.Customers[1];
+        list.DeactivateCommand.Execute(null);
+        list.ShowInactive = true;
+
+        list.ShowInactive = false;
+
+        Assert.Equal(["Anita Desai"], NamesIn(list));
+    }
+
+    [Fact]
+    public void WithShowInactiveOnADeactivatedCustomerStaysInTheListAndSelected()
+    {
+        var list = OpenList();
+        AddCustomer(list, "Ramesh Patil");
+        list.ShowInactive = true;
+        list.SelectedCustomer = list.Customers[0];
+
+        list.DeactivateCommand.Execute(null);
+
+        var row = Assert.Single(list.Customers);
+        Assert.False(row.IsActive);
+        Assert.Same(row, list.SelectedCustomer);
+    }
+
+    [Fact]
+    public void TheSearchAlsoAppliesToInactiveCustomers()
+    {
+        var list = OpenList();
+        AddCustomer(list, "Anita Desai");
+        AddCustomer(list, "Ramesh Patil");
+        list.SelectedCustomer = list.Customers[1];
+        list.DeactivateCommand.Execute(null);
+        list.ShowInactive = true;
+
+        list.SearchText = "patil";
+
+        Assert.Equal(["Ramesh Patil"], NamesIn(list));
+    }
+
+    [Fact]
+    public void ActivatingAnInactiveCustomerReturnsItToTheDefaultList()
+    {
+        var list = OpenList();
+        AddCustomer(list, "Anita Desai");
+        AddCustomer(list, "Ramesh Patil");
+        list.SelectedCustomer = list.Customers[1];
+        list.DeactivateCommand.Execute(null);
+        list.ShowInactive = true;
+        list.SelectedCustomer = list.Customers[1];
+
+        list.ActivateCommand.Execute(null);
+
+        Assert.True(list.Customers[1].IsActive);
+        Assert.Same(list.Customers[1], list.SelectedCustomer);
+        Assert.True(FindInDatabase("Ramesh Patil")?.IsActive);
+        Assert.Equal(["Anita Desai", "Ramesh Patil"], NamesIn(OpenList()));
+    }
+
+    [Fact]
+    public void ActivateDoesNothingWhenNoCustomerIsSelected()
+    {
+        var list = OpenList();
+        AddCustomer(list, "Ramesh Patil");
+        list.DeactivateCommand.Execute(null);
+        list.ShowInactive = true;
+        list.SelectedCustomer = null;
+
+        list.ActivateCommand.Execute(null);
+
+        Assert.False(FindInDatabase("Ramesh Patil")?.IsActive);
+    }
+
+    [Fact]
+    public void DeleteAsksForConfirmationNamingTheCustomer()
+    {
+        var list = OpenList();
+        AddCustomer(list, "Ramesh Patil");
+
+        list.DeleteCommand.Execute(null);
+
+        var question = Assert.Single(_confirmationPrompt.Questions);
+        Assert.Contains("Ramesh Patil", question, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ConfirmingDeleteRemovesTheCustomer()
+    {
+        var list = OpenList();
+        AddCustomer(list, "Anita Desai");
+        AddCustomer(list, "Ramesh Patil");
+        list.SelectedCustomer = list.Customers[1];
+        _confirmationPrompt.Answer = true;
+
+        list.DeleteCommand.Execute(null);
+
+        Assert.Equal(["Anita Desai"], NamesIn(list));
+        Assert.Null(list.SelectedCustomer);
+        Assert.Null(FindInDatabase("Ramesh Patil"));
+    }
+
+    [Fact]
+    public void DecliningDeleteLeavesTheCustomerInPlace()
+    {
+        var list = OpenList();
+        AddCustomer(list, "Ramesh Patil");
+        _confirmationPrompt.Answer = false;
+
+        list.DeleteCommand.Execute(null);
+
+        var row = Assert.Single(list.Customers);
+        Assert.Same(row, list.SelectedCustomer);
+        Assert.NotNull(FindInDatabase("Ramesh Patil"));
+    }
+
+    [Fact]
+    public void AnInactiveCustomerCanBeDeleted()
+    {
+        var list = OpenList();
+        AddCustomer(list, "Ramesh Patil");
+        list.DeactivateCommand.Execute(null);
+        list.ShowInactive = true;
+        list.SelectedCustomer = list.Customers[0];
+
+        list.DeleteCommand.Execute(null);
+
+        Assert.Empty(list.Customers);
+        Assert.Null(FindInDatabase("Ramesh Patil"));
+    }
+
+    [Fact]
+    public void DeleteDoesNothingWhenNoCustomerIsSelected()
+    {
+        var list = OpenList();
+        AddCustomer(list, "Ramesh Patil");
+        list.SelectedCustomer = null;
+
+        list.DeleteCommand.Execute(null);
+
+        Assert.Empty(_confirmationPrompt.Questions);
+        Assert.NotNull(FindInDatabase("Ramesh Patil"));
     }
 }

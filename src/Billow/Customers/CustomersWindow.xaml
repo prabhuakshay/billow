@@ -25,6 +25,37 @@
                         Command="{Binding AddCommand}" />
                 <Button DockPanel.Dock="Left" Content="_Edit…" Width="80" Height="24" Margin="8,0,0,0"
                         Command="{Binding EditCommand}" />
+
+                <!-- Only one of Deactivate and Activate shows, whichever the selected Customer can take. -->
+                <Button DockPanel.Dock="Left" Content="_Deactivate" Width="80" Height="24" Margin="8,0,0,0"
+                        Command="{Binding DeactivateCommand}">
+                    <Button.Style>
+                        <Style TargetType="Button">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedCustomer.IsActive}" Value="False">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
+                <Button DockPanel.Dock="Left" Content="Ac_tivate" Width="80" Height="24" Margin="8,0,0,0"
+                        Command="{Binding ActivateCommand}">
+                    <Button.Style>
+                        <Style TargetType="Button">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedCustomer.IsActive}" Value="False">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
+                <Button DockPanel.Dock="Left" Content="De_lete…" Width="80" Height="24" Margin="8,0,0,0"
+                        Command="{Binding DeleteCommand}" />
+                <CheckBox DockPanel.Dock="Left" Content="Show _inactive" Margin="16,0,0,0"
+                          VerticalAlignment="Center" IsChecked="{Binding ShowInactive}" />
                 <Button DockPanel.Dock="Right" Content="Close" Width="80" Height="24"
                         Command="Close" />
             </DockPanel>
@@ -46,6 +77,17 @@
                   CanUserAddRows="False" CanUserDeleteRows="False" CanUserSortColumns="False"
                   HeadersVisibility="Column" GridLinesVisibility="None" BorderThickness="0,0,0,1"
                   BorderBrush="{DynamicResource {x:Static SystemColors.ControlDarkBrushKey}}">
+            <!-- Inactive Customers, listed only while Show inactive is on, are greyed out. -->
+            <DataGrid.RowStyle>
+                <Style TargetType="DataGridRow">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsActive}" Value="False">
+                            <Setter Property="Foreground"
+                                    Value="{DynamicResource {x:Static SystemColors.GrayTextBrushKey}}" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </DataGrid.RowStyle>
             <DataGrid.InputBindings>
                 <MouseBinding MouseAction="LeftDoubleClick" Command="{Binding EditCommand}" />
             </DataGrid.InputBindings>

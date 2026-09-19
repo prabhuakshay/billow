@@ -14,9 +14,15 @@ public partial class CustomersWindow : Window
         DataContext = createViewModel(this);
     }
 
-    /// <summary>The list for Billow's own database, opening the Customer form over this window.</summary>
+    /// <summary>
+    /// The list for Billow's own database, opening the Customer form and asking its questions over
+    /// this window.
+    /// </summary>
     public static CustomersWindow Create() =>
-        new(window => new CustomersViewModel(() => new BillowDbContext(), new CustomerWindowOpener(window)));
+        new(window => new CustomersViewModel(
+            () => new BillowDbContext(),
+            new CustomerWindowOpener(window),
+            new MessageBoxConfirmationPrompt(window)));
 
     private void Close_Executed(object sender, ExecutedRoutedEventArgs e) => Close();
 }
