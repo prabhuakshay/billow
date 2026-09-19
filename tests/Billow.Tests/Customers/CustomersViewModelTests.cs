@@ -72,6 +72,27 @@ public sealed class CustomersViewModelTests : IDisposable
     }
 
     [Fact]
+    public void TheListShowsAB2BCustomersGstin()
+    {
+        var list = OpenList();
+        _formOpener.UseForm = form =>
+        {
+            form.Name = "Umesh Traders";
+            form.Gstin = "29AAACB2894G1ZJ";
+            form.AddressLine1 = "7 MG Road";
+            form.City = "Bengaluru";
+            form.Pin = "560001";
+            form.SaveCommand.Execute(null);
+        };
+
+        list.AddCommand.Execute(null);
+
+        var row = Assert.Single(OpenList().Customers);
+        Assert.Equal("29AAACB2894G1ZJ", row.Gstin);
+        Assert.Equal("Karnataka", row.State);
+    }
+
+    [Fact]
     public void TheListIsSortedByNameIgnoringCase()
     {
         var list = OpenList();

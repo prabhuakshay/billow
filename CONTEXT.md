@@ -15,7 +15,7 @@ A party's name as it appears on its PAN and GST registration. Both the Business 
 _Avoid_: Registered name, company name
 
 **Trade Name**:
-The name the Business trades under, usually the one on its signboard. It may differ from the Legal Name.
+The name a party trades under, usually the one on its signboard. It may differ from the Legal Name. The Business and any Customer may have one.
 _Avoid_: Shop name, brand name, display name
 
 **Registration Type**:

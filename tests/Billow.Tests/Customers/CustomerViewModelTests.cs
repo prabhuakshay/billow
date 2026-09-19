@@ -45,6 +45,24 @@ public sealed class CustomerViewModelTests : IDisposable
         return db.Customers.Count();
     }
 
+    /// <summary>Opens a new Customer with every detail a B2B Customer needs, and <paramref name="gstin"/>.</summary>
+    private CustomerViewModel OpenNewB2BCustomer(string gstin = "27AAPFU0939F1ZV", string legalName = "Umesh Traders")
+    {
+        var form = OpenNewCustomer();
+        form.Name = legalName;
+        form.AddressLine1 = "7 Laxmi Road";
+        form.City = "Pune";
+        form.Pin = "411002";
+        form.Gstin = gstin;
+        return form;
+    }
+
+    private string? StoredGstin(int id)
+    {
+        using var db = _database.Open();
+        return db.Customers.Single(c => c.Id == id).Gstin;
+    }
+
     [Fact]
     public void ACustomerSavedWithOnlyANameReopensWithTheSameDetails()
     {
@@ -283,10 +301,194 @@ public sealed class CustomerViewModelTests : IDisposable
         Assert.Equal("Edit Customer", OpenCustomer(id).Title);
     }
 
+    [Fact]
+    public void AB2BCustomerSavesAndReopensWithTheSameDetails()
+    {
+        var form = OpenNewCustomer();
+        form.Gstin = " 27aapfu0939f1zv ";
+        form.Name = "Umesh Traders Pvt Ltd";
+        form.TradeName = " Umesh Traders ";
+        form.AddressLine1 = "7 Laxmi Road";
+        form.AddressLine2 = "Budhwar Peth";
+        form.City = "Pune";
+        form.Pin = "411002";
+
+        Assert.True(form.Save());
+
+        Assert.Equal("27AAPFU0939F1ZV", StoredGstin(form.Id!.Value));
+        var reopened = OpenCustomer(form.Id!.Value);
+        Assert.Equal("27AAPFU0939F1ZV", reopened.Gstin);
+        Assert.Equal("Umesh Traders Pvt Ltd", reopened.Name);
+        Assert.Equal("Umesh Traders", reopened.TradeName);
+        Assert.Equal("7 Laxmi Road", reopened.AddressLine1);
+        Assert.Equal("Budhwar Peth", reopened.AddressLine2);
+        Assert.Equal("Pune", reopened.City);
+        Assert.Equal(GstState.Find("27"), reopened.State);
+        Assert.Equal("411002", reopened.Pin);
+        Assert.True(reopened.IsStateLocked);
+    }
+
+    [Fact]
+    public void AB2CCustomerCanHaveATradeNameAndHasNoGstin()
+    {
+        var form = OpenNewCustomer();
+        form.Name = "Ramesh Patil";
+        form.TradeName = "Patil Dairy";
+
+        Assert.True(form.Save());
+
+        var reopened = OpenCustomer(form.Id!.Value);
+        Assert.Equal("Patil Dairy", reopened.TradeName);
+        Assert.Equal("", reopened.Gstin);
+        Assert.Null(StoredGstin(form.Id!.Value));
+    }
+
+    [Fact]
+    public void AnInvalidGstinShowsItsErrorAndNothingIsSaved()
+    {
+        var form = OpenNewB2BCustomer(gstin: "27AAPFU0939F1Z");
+
+        Assert.Equal("A GSTIN has 15 characters; this has 14.", form.ErrorFor(nameof(form.Gstin)));
+        Assert.False(form.Save());
+        Assert.Equal(0, CustomerCount());
+    }
+
+    [Fact]
+    public void AValidGstinSetsTheStateAndLocksIt()
+    {
+        SaveBusinessIn("27");
+        var form = OpenNewCustomer();
+        Assert.False(form.IsStateLocked);
+
+        form.Gstin = "29aaacb2894g1zj";
+
+        Assert.Equal(GstState.Find("29"), form.State);
+        Assert.True(form.IsStateLocked);
+
+        form.State = GstState.Find("07");
+        Assert.Equal(GstState.Find("29"), form.State);
+    }
+
+    [Fact]
+    public void ClearingTheGstinUnlocksTheState()
+    {
+        var form = OpenNewCustomer();
+        form.Gstin = "29AAACB2894G1ZJ";
+
+        form.Gstin = "";
+
+        Assert.False(form.IsStateLocked);
+        form.State = GstState.Find("07");
+        Assert.Equal(GstState.Find("07"), form.State);
+    }
+
+    [Theory]
+    [InlineData(nameof(CustomerViewModel.Name), "Enter the Legal Name.")]
+    [InlineData(nameof(CustomerViewModel.AddressLine1), "Enter the first line of the address.")]
+    [InlineData(nameof(CustomerViewModel.City), "Enter the city.")]
+    [InlineData(nameof(CustomerViewModel.Pin), "Enter the 6-digit PIN.")]
+    public void WithAGstinABlankRequiredFieldIsAnErrorAndNothingIsSaved(string field, string error)
+    {
+        var form = OpenNewB2BCustomer();
+
+        SetText(form, field, "  ");
+
+        Assert.False(form.Save());
+        Assert.Equal(error, form.ErrorFor(field));
+        Assert.Equal(0, CustomerCount());
+    }
+
+    [Fact]
+    public void ClearingTheGstinClearsTheErrorsOfFieldsOnlyAB2BCustomerNeeds()
+    {
+        var form = OpenNewCustomer();
+        form.Name = "Umesh Traders";
+        form.Gstin = "27AAPFU0939F1ZV";
+        Assert.False(form.Save());
+        Assert.NotNull(form.ErrorFor(nameof(form.City)));
+
+        form.Gstin = "";
+
+        Assert.False(form.HasErrors);
+        Assert.True(form.Save());
+    }
+
+    [Fact]
+    public void ADuplicateGstinIsRefusedNamingTheCustomerWhoHasIt()
+    {
+        Assert.True(OpenNewB2BCustomer(legalName: "Umesh Traders").Save());
+
+        var form = OpenNewB2BCustomer(gstin: "27aapfu0939f1zv", legalName: "Umesh Traders (Pune)");
+
+        Assert.Equal("This GSTIN already belongs to Umesh Traders.", form.ErrorFor(nameof(form.Gstin)));
+        Assert.False(form.Save());
+        Assert.Equal(1, CustomerCount());
+    }
+
+    [Fact]
+    public void ACustomerCanBeSavedAgainWithItsOwnGstin()
+    {
+        var form = OpenNewB2BCustomer();
+        Assert.True(form.Save());
+
+        var reopened = OpenCustomer(form.Id!.Value);
+        reopened.City = "Pimpri";
+
+        Assert.Null(reopened.ErrorFor(nameof(reopened.Gstin)));
+        Assert.True(reopened.Save());
+        Assert.True(form.Save());
+    }
+
+    [Fact]
+    public void BranchesInDifferentStatesSaveAsSeparateCustomers()
+    {
+        // One PAN, so one company, registered in Maharashtra and in Karnataka.
+        Assert.True(OpenNewB2BCustomer(gstin: "27AAPFU0939F1ZV", legalName: "Umesh Traders").Save());
+        Assert.True(OpenNewB2BCustomer(gstin: "29AAPFU0939F1ZR", legalName: "Umesh Traders").Save());
+
+        Assert.Equal(2, CustomerCount());
+    }
+
+    [Fact]
+    public void AnUnregisteredBusinessCanStillHaveB2BCustomers()
+    {
+        SaveBusinessIn("27"); // as an Unregistered Business
+
+        Assert.True(OpenNewB2BCustomer().Save());
+    }
+
+    [Fact]
+    public void RemovingTheGstinOfASavedB2BCustomerMakesItAB2CCustomer()
+    {
+        var form = OpenNewB2BCustomer();
+        Assert.True(form.Save());
+        var id = form.Id!.Value;
+
+        var reopened = OpenCustomer(id);
+        reopened.Gstin = "";
+        reopened.AddressLine1 = "";
+
+        Assert.True(reopened.Save());
+        Assert.Null(StoredGstin(id));
+        var asB2C = OpenCustomer(id);
+        Assert.Equal("", asB2C.Gstin);
+        Assert.False(asB2C.IsStateLocked);
+        Assert.Equal(GstState.Find("27"), asB2C.State);
+    }
+
     private static void SetText(CustomerViewModel form, string field, string value)
     {
         switch (field)
         {
+            case nameof(form.Name):
+                form.Name = value;
+                break;
+            case nameof(form.AddressLine1):
+                form.AddressLine1 = value;
+                break;
+            case nameof(form.City):
+                form.City = value;
+                break;
             case nameof(form.Pin):
                 form.Pin = value;
                 break;
