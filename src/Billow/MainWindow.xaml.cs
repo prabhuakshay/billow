@@ -1,5 +1,6 @@
 using System.Windows;
 using Billow.BusinessDetails;
+using Billow.Customers;
 
 namespace Billow;
 
@@ -13,6 +14,13 @@ public partial class MainWindow : Window
     }
 
     private void Exit_Click(object sender, RoutedEventArgs e) => Close();
+
+    private void Customers_Click(object sender, RoutedEventArgs e)
+    {
+        var customers = CustomersWindow.Create();
+        customers.Owner = this;
+        customers.ShowDialog();
+    }
 
     private void BusinessDetails_Click(object sender, RoutedEventArgs e)
     {

@@ -11,6 +11,9 @@
                 <MenuItem Header="_File">
                     <MenuItem Header="E_xit" InputGestureText="Alt+F4" Click="Exit_Click" />
                 </MenuItem>
+                <MenuItem Header="_Masters">
+                    <MenuItem Header="_Customers…" Click="Customers_Click" />
+                </MenuItem>
                 <MenuItem Header="_Settings">
                     <MenuItem Header="_Business Details…" Click="BusinessDetails_Click" />
                 </MenuItem>
