@@ -14,9 +14,24 @@ namespace Billow.BusinessDetails;
 /// </summary>
 public sealed class BusinessDetailsViewModel : INotifyPropertyChanged, INotifyDataErrorInfo
 {
-    /// <summary>The fields that can have an error.</summary>
-    private static readonly string[] _checkedFields =
-        [nameof(LegalName), nameof(AddressLine1), nameof(City), nameof(State), nameof(Pin), nameof(Pan)];
+    /// <summary>
+    /// The rule for each field that can have an error: it gives the reason the field's current
+    /// value can't be saved, or null. Save checks every field listed here.
+    /// </summary>
+    private static readonly Dictionary<string, Func<BusinessDetailsViewModel, string?>> _rules = new()
+    {
+        [nameof(LegalName)] = screen => IsBlank(screen.LegalName) ? "Enter the Legal Name." : null,
+        [nameof(AddressLine1)] = screen => IsBlank(screen.AddressLine1) ? "Enter the first line of the address." : null,
+        [nameof(City)] = screen => IsBlank(screen.City) ? "Enter the city." : null,
+        [nameof(State)] = screen => screen.State is null ? "Choose the State." : null,
+        [nameof(Pin)] = screen => screen.Pin.Trim() switch
+        {
+            "" => "Enter the 6-digit PIN.",
+            { Length: 6 } pin when pin.All(char.IsAsciiDigit) => null,
+            _ => "A PIN is exactly 6 digits.",
+        },
+        [nameof(Pan)] = screen => IsBlank(screen.Pan) ? null : Gst.Pan.Check(screen.Pan).Error,
+    };
 
     private readonly Func<BillowDbContext> _openDatabase;
     private readonly Dictionary<string, string> _errors = [];
@@ -125,7 +140,7 @@ public sealed class BusinessDetailsViewModel : INotifyPropertyChanged, INotifyDa
     /// <summary>Stores the details as the one Business. False if nothing was saved.</summary>
     public bool Save()
     {
-        foreach (var field in _checkedFields)
+        foreach (var field in _rules.Keys)
         {
             Check(field);
         }
@@ -163,23 +178,9 @@ public sealed class BusinessDetailsViewModel : INotifyPropertyChanged, INotifyDa
     IEnumerable INotifyDataErrorInfo.GetErrors(string? propertyName) =>
         ErrorFor(propertyName ?? "") is { } error ? new[] { error } : Array.Empty<string>();
 
-    /// <summary>The reason the current value of <paramref name="propertyName"/> can't be saved, if any.</summary>
-    private string? FindError(string propertyName) => propertyName switch
-    {
-        nameof(LegalName) when IsBlank(LegalName) => "Enter the Legal Name.",
-        nameof(AddressLine1) when IsBlank(AddressLine1) => "Enter the first line of the address.",
-        nameof(City) when IsBlank(City) => "Enter the city.",
-        nameof(State) when State is null => "Choose the State.",
-        nameof(Pin) when IsBlank(Pin) => "Enter the 6-digit PIN.",
-        nameof(Pin) when Pin.Trim() is not { Length: 6 } pin || !pin.All(char.IsAsciiDigit) =>
-            "A PIN is exactly 6 digits.",
-        nameof(Pan) when !IsBlank(Pan) => Gst.Pan.Check(Pan).Error,
-        _ => null,
-    };
-
     private void Check(string propertyName)
     {
-        var error = FindError(propertyName);
+        var error = _rules.TryGetValue(propertyName, out var rule) ? rule(this) : null;
         if (error == ErrorFor(propertyName))
         {
             return;
