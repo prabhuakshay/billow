@@ -16,9 +16,9 @@ public partial class BusinessDetailsWindow : Window
     }
 
     /// <summary>The screen for Billow's own database, with real prompts and file pickers.</summary>
-    public static BusinessDetailsWindow Create(Func<BillowDbContext> openDatabase) =>
+    public static BusinessDetailsWindow Create() =>
         new(window => new BusinessDetailsViewModel(
-            openDatabase,
+            () => new BillowDbContext(),
             new MessageBoxConfirmationPrompt(window),
             new OpenFileDialogLogoFilePicker(window)));
 }

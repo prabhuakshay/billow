@@ -291,12 +291,19 @@ public sealed class BusinessDetailsViewModelTests : IDisposable
     }
 
     [Fact]
-    public void NoBusinessHasBeenSavedAfterTheScreenIsCancelledOrFailsToSave()
+    public void NoBusinessHasBeenSavedWhenTheScreenIsCancelled()
+    {
+        OpenScreenWithValidDetails().CancelCommand.Execute(null);
+
+        Assert.False(BusinessDetailsViewModel.HasSavedBusiness(_database.Open));
+    }
+
+    [Fact]
+    public void NoBusinessHasBeenSavedWhileTheScreenHasErrors()
     {
         var screen = OpenScreenWithValidDetails();
         screen.LegalName = "";
         screen.SaveCommand.Execute(null);
-        screen.CancelCommand.Execute(null);
 
         Assert.False(BusinessDetailsViewModel.HasSavedBusiness(_database.Open));
     }
