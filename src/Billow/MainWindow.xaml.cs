@@ -1,6 +1,5 @@
 using System.Windows;
 using Billow.BusinessDetails;
-using Billow.Data;
 
 namespace Billow;
 
@@ -17,7 +16,7 @@ public partial class MainWindow : Window
 
     private void BusinessDetails_Click(object sender, RoutedEventArgs e)
     {
-        var businessDetails = BusinessDetailsWindow.Create(() => new BillowDbContext());
+        var businessDetails = BusinessDetailsWindow.Create();
         businessDetails.Owner = this;
         businessDetails.ShowDialog();
     }
