@@ -219,6 +219,53 @@
 
                     <Button Content="A_dd Additional Registration" HorizontalAlignment="Left" Padding="10,2" Margin="0,8,0,0"
                             Command="{Binding AddAdditionalRegistrationCommand}" />
+
+                    <TextBlock Text="Contact &amp; Payment" Style="{StaticResource SectionHeading}" />
+
+                    <Label Content="Ph_one" Target="{Binding ElementName=PhoneBox}"
+                           Style="{StaticResource FieldLabel}" />
+                    <TextBox x:Name="PhoneBox" Width="200" HorizontalAlignment="Left"
+                             Text="{Binding Phone, UpdateSourceTrigger=PropertyChanged}" />
+
+                    <Label Content="_Email" Target="{Binding ElementName=EmailBox}"
+                           Style="{StaticResource FieldLabel}" />
+                    <TextBox x:Name="EmailBox"
+                             Text="{Binding Email, UpdateSourceTrigger=PropertyChanged}" />
+
+                    <Label Content="_UPI ID" Target="{Binding ElementName=UpiIdBox}"
+                           Style="{StaticResource FieldLabel}" />
+                    <ContentControl Style="{StaticResource WithError}">
+                        <TextBox x:Name="UpiIdBox"
+                                 Text="{Binding UpiId, UpdateSourceTrigger=PropertyChanged}" />
+                    </ContentControl>
+
+                    <Label Content="Account Na_me" Target="{Binding ElementName=BankAccountNameBox}"
+                           Style="{StaticResource FieldLabel}" />
+                    <TextBox x:Name="BankAccountNameBox"
+                             Text="{Binding BankAccountName, UpdateSourceTrigger=PropertyChanged}" />
+
+                    <Label Content="Account Num_ber" Target="{Binding ElementName=BankAccountNumberBox}"
+                           Style="{StaticResource FieldLabel}" />
+                    <TextBox x:Name="BankAccountNumberBox" Width="200" HorizontalAlignment="Left"
+                             Text="{Binding BankAccountNumber, UpdateSourceTrigger=PropertyChanged}" />
+
+                    <Label Content="_IFSC" Target="{Binding ElementName=IfscBox}"
+                           Style="{StaticResource FieldLabel}" />
+                    <ContentControl Style="{StaticResource WithError}">
+                        <TextBox x:Name="IfscBox" Width="160" HorizontalAlignment="Left"
+                                 CharacterCasing="Upper"
+                                 Text="{Binding Ifsc, UpdateSourceTrigger=PropertyChanged}" />
+                    </ContentControl>
+
+                    <Label Content="Ban_k Name" Target="{Binding ElementName=BankNameBox}"
+                           Style="{StaticResource FieldLabel}" />
+                    <TextBox x:Name="BankNameBox"
+                             Text="{Binding BankName, UpdateSourceTrigger=PropertyChanged}" />
+
+                    <Label Content="Branc_h" Target="{Binding ElementName=BankBranchBox}"
+                           Style="{StaticResource FieldLabel}" />
+                    <TextBox x:Name="BankBranchBox"
+                             Text="{Binding BankBranch, UpdateSourceTrigger=PropertyChanged}" />
                 </StackPanel>
             </ScrollViewer>
         </Border>

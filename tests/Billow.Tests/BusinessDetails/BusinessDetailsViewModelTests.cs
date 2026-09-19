@@ -729,6 +729,141 @@ public sealed class BusinessDetailsViewModelTests : IDisposable
         Assert.False(screen.HasErrors);
     }
 
+    [Fact]
+    public void SavedContactAndPaymentDetailsAreShownWhenTheScreenIsReopened()
+    {
+        var screen = OpenScreenWithValidDetails();
+        screen.Phone = "+91 98220 12345";
+        screen.Email = "accounts@sharmastores.in";
+        screen.UpiId = "sharmastores@okaxis";
+        screen.BankAccountName = "Sharma General Stores";
+        screen.BankAccountNumber = "50100123456789";
+        screen.Ifsc = "HDFC0001234";
+        screen.BankName = "HDFC Bank";
+        screen.BankBranch = "Station Road, Pune";
+
+        Assert.True(screen.Save());
+
+        var reopened = OpenScreen();
+        Assert.Equal("+91 98220 12345", reopened.Phone);
+        Assert.Equal("accounts@sharmastores.in", reopened.Email);
+        Assert.Equal("sharmastores@okaxis", reopened.UpiId);
+        Assert.Equal("Sharma General Stores", reopened.BankAccountName);
+        Assert.Equal("50100123456789", reopened.BankAccountNumber);
+        Assert.Equal("HDFC0001234", reopened.Ifsc);
+        Assert.Equal("HDFC Bank", reopened.BankName);
+        Assert.Equal("Station Road, Pune", reopened.BankBranch);
+    }
+
+    [Fact]
+    public void ContactAndPaymentDetailsAreOptional()
+    {
+        var screen = OpenScreenWithValidDetails();
+
+        Assert.True(screen.Save());
+
+        var reopened = OpenScreen();
+        Assert.Equal("", reopened.Phone);
+        Assert.Equal("", reopened.Email);
+        Assert.Equal("", reopened.UpiId);
+        Assert.Equal("", reopened.BankAccountName);
+        Assert.Equal("", reopened.BankAccountNumber);
+        Assert.Equal("", reopened.Ifsc);
+        Assert.Equal("", reopened.BankName);
+        Assert.Equal("", reopened.BankBranch);
+    }
+
+    [Theory]
+    [InlineData("sharmastores")]
+    [InlineData("sharmastores@")]
+    [InlineData("@okaxis")]
+    [InlineData("sharma stores@okaxis")]
+    [InlineData("sharma@stores@okaxis")]
+    [InlineData("sharmastores@ok axis")]
+    public void ABadlyFormedUpiIdIsAnErrorAndBlocksSave(string upiId)
+    {
+        var screen = OpenScreenWithValidDetails();
+
+        screen.UpiId = upiId;
+
+        Assert.Equal(
+            "A UPI ID is a name, then @, then the bank's handle, such as sharmastores@okaxis.",
+            screen.ErrorFor(nameof(screen.UpiId)));
+        Assert.False(screen.Save());
+        Assert.False(BusinessDetailsViewModel.HasSavedBusiness(_database.Open));
+    }
+
+    [Theory]
+    [InlineData("sharmastores@okaxis")]
+    [InlineData("9822012345@ybl")]
+    [InlineData("sharma.stores-1_pune@paytm")]
+    public void AWellFormedUpiIdIsSaved(string upiId)
+    {
+        var screen = OpenScreenWithValidDetails();
+
+        screen.UpiId = $" {upiId} ";
+
+        Assert.Null(screen.ErrorFor(nameof(screen.UpiId)));
+        Assert.True(screen.Save());
+        Assert.Equal(upiId, OpenScreen().UpiId);
+    }
+
+    [Theory]
+    [InlineData("HDFC000123")] // too short
+    [InlineData("HDFC00012345")] // too long
+    [InlineData("HDFC1001234")] // 5th character not 0
+    [InlineData("HDF00001234")] // only 3 letters first
+    [InlineData("HDFC0-01234")]
+    [InlineData("HDFC 001234")]
+    public void ABadlyFormedIfscIsAnErrorAndBlocksSave(string ifsc)
+    {
+        var screen = OpenScreenWithValidDetails();
+
+        screen.Ifsc = ifsc;
+
+        Assert.Equal(
+            "An IFSC is 4 letters, then 0, then 6 letters or digits, such as HDFC0001234.",
+            screen.ErrorFor(nameof(screen.Ifsc)));
+        Assert.False(screen.Save());
+        Assert.False(BusinessDetailsViewModel.HasSavedBusiness(_database.Open));
+    }
+
+    [Theory]
+    [InlineData("HDFC0001234", "HDFC0001234")]
+    [InlineData("SBIN0PUNE01", "SBIN0PUNE01")]
+    [InlineData(" hdfc0001234 ", "HDFC0001234")]
+    [InlineData("sbin0pune01", "SBIN0PUNE01")]
+    public void AWellFormedIfscIsSavedUppercased(string ifsc, string saved)
+    {
+        var screen = OpenScreenWithValidDetails();
+
+        screen.Ifsc = ifsc;
+
+        Assert.Null(screen.ErrorFor(nameof(screen.Ifsc)));
+        Assert.True(screen.Save());
+        Assert.Equal(saved, OpenScreen().Ifsc);
+    }
+
+    [Fact]
+    public void CancelPutsBackTheSavedContactAndPaymentDetails()
+    {
+        var screen = OpenScreenWithValidDetails();
+        screen.UpiId = "sharmastores@okaxis";
+        screen.Ifsc = "HDFC0001234";
+        Assert.True(screen.Save());
+        screen = OpenScreen();
+        screen.Phone = "020 2612 3456";
+        screen.UpiId = "not a upi id";
+        screen.Ifsc = "HDFC";
+
+        screen.CancelCommand.Execute(null);
+
+        Assert.Equal("", screen.Phone);
+        Assert.Equal("sharmastores@okaxis", screen.UpiId);
+        Assert.Equal("HDFC0001234", screen.Ifsc);
+        Assert.False(screen.HasErrors);
+    }
+
     private const string ChangeAppliesToNewBillsOnly =
         "Changing the Registration Type or GSTIN applies to new Bills only. Bills already issued "
         + "keep the details they were printed with.\n\nSave the change?";

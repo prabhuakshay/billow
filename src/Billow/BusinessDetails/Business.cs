@@ -27,6 +27,23 @@ public class Business
 
     public string? Pan { get; set; }
 
+    public string? Phone { get; set; }
+
+    public string? Email { get; set; }
+
+    public string? UpiId { get; set; }
+
+    public string? BankAccountName { get; set; }
+
+    public string? BankAccountNumber { get; set; }
+
+    /// <summary>The bank branch's IFSC, uppercased.</summary>
+    public string? Ifsc { get; set; }
+
+    public string? BankName { get; set; }
+
+    public string? BankBranch { get; set; }
+
     /// <summary>The Additional Registrations printed on Bills. Not sorted: order them by <see cref="AdditionalRegistration.Position"/>.</summary>
     public List<AdditionalRegistration> AdditionalRegistrations { get; } = [];
 }
