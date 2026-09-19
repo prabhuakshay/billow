@@ -2,10 +2,11 @@ namespace Billow.Customers;
 
 /// <summary>
 /// One Customer as a row of the Customers list. Details the Customer doesn't have are empty. The
-/// Trade Name isn't shown, but the search looks in it.
+/// Trade Name isn't shown, but the search looks in it. An inactive Customer is only listed while
+/// inactive Customers are shown.
 /// </summary>
 public sealed record CustomerListItem(
-    int Id, string Name, string TradeName, string Gstin, string City, string State, string Phone)
+    int Id, string Name, string TradeName, string Gstin, string City, string State, string Phone, bool IsActive)
 {
     /// <summary>
     /// Whether the name, Trade Name, phone or GSTIN contains the text, ignoring case. Spaces are
