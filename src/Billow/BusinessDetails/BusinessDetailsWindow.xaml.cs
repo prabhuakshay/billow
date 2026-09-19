@@ -1,4 +1,5 @@
 using System.Windows;
+using Billow.Data;
 
 namespace Billow.BusinessDetails;
 
@@ -13,4 +14,11 @@ public partial class BusinessDetailsWindow : Window
         viewModel.CloseRequested += (_, saved) => DialogResult = saved;
         DataContext = viewModel;
     }
+
+    /// <summary>The screen for Billow's own database, with real prompts and file pickers.</summary>
+    public static BusinessDetailsWindow Create(Func<BillowDbContext> openDatabase) =>
+        new(window => new BusinessDetailsViewModel(
+            openDatabase,
+            new MessageBoxConfirmationPrompt(window),
+            new OpenFileDialogLogoFilePicker(window)));
 }

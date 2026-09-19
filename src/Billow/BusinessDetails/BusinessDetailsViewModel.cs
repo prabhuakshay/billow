@@ -137,6 +137,13 @@ public sealed class BusinessDetailsViewModel : INotifyPropertyChanged, INotifyDa
         set => SetAndCheck(ref _pan, value);
     }
 
+    /// <summary>Whether the one Business has been saved yet. Until it has, Billow can't bill.</summary>
+    public static bool HasSavedBusiness(Func<BillowDbContext> openDatabase)
+    {
+        using var db = openDatabase();
+        return db.Businesses.Any();
+    }
+
     /// <summary>Stores the details as the one Business. False if nothing was saved.</summary>
     public bool Save()
     {
