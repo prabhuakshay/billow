@@ -26,4 +26,7 @@ public class Business
     public string? Gstin { get; set; }
 
     public string? Pan { get; set; }
+
+    /// <summary>The Additional Registrations printed on Bills. Not sorted: order them by <see cref="AdditionalRegistration.Position"/>.</summary>
+    public List<AdditionalRegistration> AdditionalRegistrations { get; } = [];
 }

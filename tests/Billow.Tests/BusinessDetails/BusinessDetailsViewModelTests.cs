@@ -563,9 +563,185 @@ public sealed class BusinessDetailsViewModelTests : IDisposable
         Assert.False(BusinessDetailsViewModel.HasSavedBusiness(_database.Open));
     }
 
+    [Fact]
+    public void AnAddedAdditionalRegistrationIsShownWhenTheScreenIsReopened()
+    {
+        var screen = OpenScreenWithValidDetails();
+
+        screen.AddAdditionalRegistrationCommand.Execute(null);
+        screen.AdditionalRegistrations[0].Label = "FSSAI Lic. No.";
+        screen.AdditionalRegistrations[0].Number = "11521999000123";
+
+        Assert.True(screen.Save());
+        var row = Assert.Single(OpenScreen().AdditionalRegistrations);
+        Assert.Equal("FSSAI Lic. No.", row.Label);
+        Assert.Equal("11521999000123", row.Number);
+    }
+
+    [Fact]
+    public void AdditionalRegistrationsCanBeReorderedAndKeepTheirOrderWhenSaved()
+    {
+        var screen = OpenScreenWithValidDetails();
+        AddAdditionalRegistration(screen, "FSSAI Lic. No.", "11521999000123");
+        AddAdditionalRegistration(screen, "D.L. No.", "MH-PZ3-123456");
+        AddAdditionalRegistration(screen, "Udyam Reg. No.", "UDYAM-MH-26-0012345");
+
+        screen.AdditionalRegistrations[2].MoveUpCommand.Execute(null);
+        screen.AdditionalRegistrations[0].MoveDownCommand.Execute(null);
+
+        Assert.Equal(["Udyam Reg. No.", "FSSAI Lic. No.", "D.L. No."], LabelsOf(screen));
+        Assert.True(screen.Save());
+        Assert.Equal(["Udyam Reg. No.", "FSSAI Lic. No.", "D.L. No."], LabelsOf(OpenScreen()));
+    }
+
+    [Fact]
+    public void TheFirstAdditionalRegistrationCannotMoveUpNorTheLastDown()
+    {
+        var screen = OpenScreenWithValidDetails();
+        AddAdditionalRegistration(screen, "FSSAI Lic. No.", "11521999000123");
+        AddAdditionalRegistration(screen, "D.L. No.", "MH-PZ3-123456");
+
+        screen.AdditionalRegistrations[0].MoveUpCommand.Execute(null);
+        screen.AdditionalRegistrations[1].MoveDownCommand.Execute(null);
+
+        Assert.Equal(["FSSAI Lic. No.", "D.L. No."], LabelsOf(screen));
+    }
+
+    [Fact]
+    public void ARemovedAdditionalRegistrationIsGoneOnceSaved()
+    {
+        var screen = OpenScreenWithValidDetails();
+        AddAdditionalRegistration(screen, "FSSAI Lic. No.", "11521999000123");
+        AddAdditionalRegistration(screen, "D.L. No.", "MH-PZ3-123456");
+        Assert.True(screen.Save());
+        screen = OpenScreen();
+
+        screen.AdditionalRegistrations[0].RemoveCommand.Execute(null);
+
+        Assert.Equal(["D.L. No."], LabelsOf(screen));
+        Assert.True(screen.Save());
+        Assert.Equal(["D.L. No."], LabelsOf(OpenScreen()));
+    }
+
+    [Fact]
+    public void ASavedAdditionalRegistrationCanBeEdited()
+    {
+        var screen = OpenScreenWithValidDetails();
+        AddAdditionalRegistration(screen, "FSSAI Lic. No.", "11521999000123");
+        Assert.True(screen.Save());
+        screen = OpenScreen();
+
+        screen.AdditionalRegistrations[0].Label = "FSSAI Reg. No.";
+        screen.AdditionalRegistrations[0].Number = "21521999000456";
+
+        Assert.True(screen.Save());
+        var row = Assert.Single(OpenScreen().AdditionalRegistrations);
+        Assert.Equal("FSSAI Reg. No.", row.Label);
+        Assert.Equal("21521999000456", row.Number);
+    }
+
+    [Theory]
+    [InlineData("FSSAI Lic. No.", "", nameof(AdditionalRegistrationViewModel.Number), "Enter the number.")]
+    [InlineData("FSSAI Lic. No.", "   ", nameof(AdditionalRegistrationViewModel.Number), "Enter the number.")]
+    [InlineData("", "11521999000123", nameof(AdditionalRegistrationViewModel.Label), "Enter the label.")]
+    [InlineData("  ", "11521999000123", nameof(AdditionalRegistrationViewModel.Label), "Enter the label.")]
+    public void AHalfFilledAdditionalRegistrationIsAnErrorAndBlocksSave(
+        string label, string number, string field, string error)
+    {
+        var screen = OpenScreenWithValidDetails();
+        var closed = false;
+        screen.CloseRequested += (_, _) => closed = true;
+
+        AddAdditionalRegistration(screen, label, number);
+        screen.SaveCommand.Execute(null);
+
+        var row = screen.AdditionalRegistrations[0];
+        Assert.Equal(error, row.ErrorFor(field));
+        Assert.True(row.HasErrors);
+        Assert.True(screen.HasErrors);
+        Assert.False(closed);
+        Assert.False(BusinessDetailsViewModel.HasSavedBusiness(_database.Open));
+    }
+
+    [Fact]
+    public void AHalfFilledAdditionalRegistrationsErrorClearsOnceItIsFilledIn()
+    {
+        var screen = OpenScreenWithValidDetails();
+        AddAdditionalRegistration(screen, "D.L. No.", "");
+        Assert.False(screen.Save());
+
+        screen.AdditionalRegistrations[0].Number = "MH-PZ3-123456";
+
+        Assert.Null(screen.AdditionalRegistrations[0].ErrorFor(nameof(AdditionalRegistrationViewModel.Number)));
+        Assert.False(screen.HasErrors);
+        Assert.True(screen.Save());
+    }
+
+    [Fact]
+    public void AnEmptyAdditionalRegistrationIsNotAnErrorAndIsNotSaved()
+    {
+        var screen = OpenScreenWithValidDetails();
+        AddAdditionalRegistration(screen, "FSSAI Lic. No.", "11521999000123");
+        AddAdditionalRegistration(screen, " ", "");
+
+        Assert.True(screen.Save());
+        Assert.False(screen.AdditionalRegistrations[1].HasErrors);
+        Assert.Equal(["FSSAI Lic. No."], LabelsOf(OpenScreen()));
+    }
+
+    [Fact]
+    public void AnAdditionalRegistrationIsSavedWithoutSurroundingSpaces()
+    {
+        var screen = OpenScreenWithValidDetails();
+        AddAdditionalRegistration(screen, " Drug Lic. No. 20B ", " MH-PZ3-123456 ");
+
+        Assert.True(screen.Save());
+        var row = Assert.Single(OpenScreen().AdditionalRegistrations);
+        Assert.Equal("Drug Lic. No. 20B", row.Label);
+        Assert.Equal("MH-PZ3-123456", row.Number);
+    }
+
+    [Fact]
+    public void TheCommonAdditionalRegistrationLabelsAreSuggested()
+    {
+        Assert.Equal(
+            ["FSSAI Lic. No.", "D.L. No.", "Udyam Reg. No.", "Shop Act Lic. No."],
+            OpenScreen().SuggestedAdditionalRegistrationLabels);
+    }
+
+    [Fact]
+    public void CancelPutsBackTheSavedAdditionalRegistrations()
+    {
+        var screen = OpenScreenWithValidDetails();
+        AddAdditionalRegistration(screen, "FSSAI Lic. No.", "11521999000123");
+        AddAdditionalRegistration(screen, "D.L. No.", "MH-PZ3-123456");
+        Assert.True(screen.Save());
+        screen = OpenScreen();
+        screen.AdditionalRegistrations[1].MoveUpCommand.Execute(null);
+        screen.AdditionalRegistrations[0].Number = "";
+        screen.AdditionalRegistrations[1].RemoveCommand.Execute(null);
+        AddAdditionalRegistration(screen, "Udyam Reg. No.", "UDYAM-MH-26-0012345");
+
+        screen.CancelCommand.Execute(null);
+
+        Assert.Equal(["FSSAI Lic. No.", "D.L. No."], LabelsOf(screen));
+        Assert.Equal("MH-PZ3-123456", screen.AdditionalRegistrations[1].Number);
+        Assert.False(screen.HasErrors);
+    }
+
     private const string ChangeAppliesToNewBillsOnly =
         "Changing the Registration Type or GSTIN applies to new Bills only. Bills already issued "
         + "keep the details they were printed with.\n\nSave the change?";
+
+    private static void AddAdditionalRegistration(BusinessDetailsViewModel screen, string label, string number)
+    {
+        screen.AddAdditionalRegistrationCommand.Execute(null);
+        screen.AdditionalRegistrations[^1].Label = label;
+        screen.AdditionalRegistrations[^1].Number = number;
+    }
+
+    private static string[] LabelsOf(BusinessDetailsViewModel screen) =>
+        [.. screen.AdditionalRegistrations.Select(row => row.Label)];
 
     private static void SetText(BusinessDetailsViewModel screen, string field, string value)
     {
